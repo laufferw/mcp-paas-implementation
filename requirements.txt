@@ -1,0 +1,50 @@
+# API Framework
+fastapi>=0.100.0
+uvicorn[standard]>=0.22.0
+
+# Database
+sqlalchemy>=2.0.0
+alembic>=1.11.0
+psycopg2-binary>=2.9.6
+asyncpg>=0.27.0
+
+# Data Validation
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+email-validator>=2.0.0
+
+# Authentication
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+python-multipart>=0.0.6
+
+# Monitoring and Metrics
+prometheus-client>=0.17.0
+opentelemetry-api>=1.18.0
+opentelemetry-sdk>=1.18.0
+opentelemetry-exporter-prometheus>=1.18.0
+
+# Logging
+structlog>=23.1.0
+rich>=13.4.2
+
+# Testing
+pytest>=7.3.1
+pytest-asyncio>=0.21.1
+httpx>=0.24.1
+
+# Utilities
+python-dotenv>=1.0.0
+tenacity>=8.2.2
+aioredis>=2.0.1
+
+fastapi>=0.95.0
+uvicorn>=0.21.0
+pydantic>=1.10.7
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+prometheus-client>=0.16.0
+python-multipart>=0.0.6
+pytest>=7.3.1
+httpx>=0.24.0
+
