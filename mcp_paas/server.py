@@ -1,5 +1,7 @@
 import logging
+import sys
 import time
+from pathlib import Path
 from typing import Dict, List, Optional, Union
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response, status
@@ -16,6 +18,13 @@ from mcp_paas.models.tenant import Tenant
 from mcp_paas.services.auth import create_access_token, verify_token
 from mcp_paas.services.context_manager import MCPContextManager
 from mcp_paas.utils.rate_limiter import RateLimiter
+
+# Temporary bridge so we can import the new gateway package from ./src.
+SRC_PATH = Path(__file__).resolve().parent.parent / "src"
+if str(SRC_PATH) not in sys.path:
+    sys.path.append(str(SRC_PATH))
+
+from mcp_gateway.api import router as gateway_router
 
 # Set up logging
 logging.basicConfig(
@@ -145,6 +154,10 @@ class LoginRequest(BaseModel):
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str
+
+
+# Mount gateway/control-plane scaffold endpoints.
+app.include_router(gateway_router)
 
 
 # Health check endpoint
