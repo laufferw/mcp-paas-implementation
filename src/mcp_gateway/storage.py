@@ -20,6 +20,12 @@ class GatewayStorage:
         conn.row_factory = sqlite3.Row
         return conn
 
+    def _ensure_column(self, conn: sqlite3.Connection, table: str, column: str, ddl: str) -> None:
+        cols = conn.execute(f"PRAGMA table_info({table})").fetchall()
+        col_names = {c[1] for c in cols}
+        if column not in col_names:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {ddl}")
+
     def _init_schema(self) -> None:
         with self._connect() as conn:
             conn.execute(
@@ -36,6 +42,9 @@ class GatewayStorage:
                 )
                 """
             )
+            self._ensure_column(conn, "gateway_servers", "weight", "weight INTEGER NOT NULL DEFAULT 1")
+            self._ensure_column(conn, "gateway_servers", "priority", "priority INTEGER NOT NULL DEFAULT 100")
+
             conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS gateway_policy_rules (
@@ -44,6 +53,20 @@ class GatewayStorage:
                     actions_json TEXT NOT NULL,
                     resources_json TEXT NOT NULL,
                     tenants_json TEXT
+                )
+                """
+            )
+
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS gateway_access_tokens (
+                    token TEXT PRIMARY KEY,
+                    subject_id TEXT NOT NULL,
+                    tenant_id TEXT,
+                    role TEXT NOT NULL,
+                    scopes_json TEXT NOT NULL,
+                    enabled INTEGER NOT NULL DEFAULT 1,
+                    created_at TEXT NOT NULL
                 )
                 """
             )

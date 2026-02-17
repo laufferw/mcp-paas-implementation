@@ -2,30 +2,36 @@
 
 This repository is transitioning from a model-context PaaS API into an **MCP Gateway + Control Plane**.
 
-The project now keeps legacy APIs intact while adding persistent control-plane capabilities under `/gateway/*`.
+The project keeps legacy APIs intact while adding persistent gateway control-plane capabilities under `/gateway/*`.
 
-## Phase 1 implemented
+## Implemented so far
 
-- Added migration and architecture docs in `docs/`.
-- Added gateway package: `src/mcp_gateway`.
-- Added persistent SQLite storage for:
-  - registered MCP servers
-  - policy rules
-- Added policy management + registry management APIs.
-- Added dry-run route evaluation with explicit deny reasons and server health filtering.
-- Added Prometheus export endpoint for gateway metrics.
+### Phase 1
+- Persistent SQLite storage for registered servers and policy rules
+- Policy management + registry management APIs
+- Dry-run route evaluation with explicit deny reasons and health filtering
+- Prometheus metrics export endpoint
+
+### Phase 2 (current)
+- Transport-specific endpoint validation (`stdio`, `sse`, `streamable-http`, `ws`)
+- Weighted/failover route selection for dry-run planning
+- Tenant-scoped RBAC token model and scope checks
+- CI workflow for gateway tests
 
 ## Gateway endpoints
 
 - `GET /gateway/health`
 - `GET /gateway/metrics`
 - `GET /gateway/servers`
-- `POST /gateway/servers` *(admin token required)*
-- `POST /gateway/servers/{server_id}/health?healthy=true|false` *(admin token required)*
+- `POST /gateway/servers`
+- `POST /gateway/servers/{server_id}/health?healthy=true|false`
 - `GET /gateway/policy/rules`
-- `POST /gateway/policy/rules` *(admin token required)*
-- `DELETE /gateway/policy/rules/{name}` *(admin token required)*
+- `POST /gateway/policy/rules`
+- `DELETE /gateway/policy/rules/{name}`
+- `POST /gateway/access/tokens`
 - `POST /gateway/routes/dry-run`
+
+> Protected endpoints require `x-gateway-token` with appropriate role/scope.
 
 ## Quickstart
 
@@ -34,7 +40,7 @@ The project now keeps legacy APIs intact while adding persistent control-plane c
 git clone <repository-url>
 cd mcp-paas-implementation
 
-# Install deps (choose your env toolchain)
+# Install deps
 pip install -r requirements.txt
 ```
 
@@ -51,32 +57,44 @@ Run the API:
 uvicorn mcp_paas.server:app --reload
 ```
 
-Try the Phase 1 flow:
+## Phase 2 example flow
 
 ```bash
-curl http://localhost:8000/gateway/health
+# 1) create a tenant operator token via bootstrap admin token
+curl -X POST http://localhost:8000/gateway/access/tokens \
+  -H 'Content-Type: application/json' \
+  -H 'x-gateway-token: dev-gateway-token' \
+  -d '{
+    "token":"tenant-a-token",
+    "subject_id":"tenant-a-op",
+    "tenant_id":"tenant-a",
+    "role":"tenant-operator",
+    "scopes":["gateway:read","gateway:write","gateway:plan"]
+  }'
 
+# 2) register servers
 curl -X POST http://localhost:8000/gateway/servers \
   -H 'Content-Type: application/json' \
-  -H 'x-gateway-admin-token: dev-gateway-token' \
-  -d '{"server_id":"srv-1","name":"github-mcp","tenant_id":"tenant-a","transport":"sse","endpoint":"https://example.com/sse"}'
+  -H 'x-gateway-token: tenant-a-token' \
+  -d '{"server_id":"srv-1","name":"github-mcp","tenant_id":"tenant-a","transport":"sse","endpoint":"https://example.com/sse","weight":5,"priority":20}'
 
+# 3) add policy rule with admin token
 curl -X POST http://localhost:8000/gateway/policy/rules \
   -H 'Content-Type: application/json' \
-  -H 'x-gateway-admin-token: dev-gateway-token' \
-  -d '{"name":"allow-tenant-a-plan-srv1","effect":"allow","actions":["plan"],"resources":["gateway.server.srv-1"],"tenants":["tenant-a"]}'
+  -H 'x-gateway-token: dev-gateway-token' \
+  -d '{"name":"allow-tenant-a-plan","effect":"allow","actions":["plan"],"resources":["gateway.server.srv-1"],"tenants":["tenant-a"]}'
 
+# 4) dry-run plan
 curl -X POST http://localhost:8000/gateway/routes/dry-run \
   -H 'Content-Type: application/json' \
-  -d '{"tenant_id":"tenant-a","action":"plan","server_id":"srv-1"}'
+  -H 'x-gateway-token: tenant-a-token' \
+  -d '{"tenant_id":"tenant-a","action":"plan","strategy":"weighted"}'
 ```
 
 ## Tests
 
-Targeted tests added for policy and gateway API:
-
 ```bash
-pytest tests/test_gateway_policy.py tests/test_gateway_api.py -q
+pytest -q tests/test_gateway_policy.py tests/test_gateway_api.py tests/mcp_gateway/test_policy.py
 ```
 
 ## Directional docs

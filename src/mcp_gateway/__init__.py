@@ -13,6 +13,7 @@ from .policy import (
 )
 from .registry import GatewayRegistry, RegisteredServer
 from .storage import GatewayStorage
+from .authz import AccessToken, AuthzStore
 
 __all__ = [
     "PolicyDecision",
@@ -23,4 +24,6 @@ __all__ = [
     "GatewayRegistry",
     "RegisteredServer",
     "GatewayStorage",
+    "AccessToken",
+    "AuthzStore",
 ]
