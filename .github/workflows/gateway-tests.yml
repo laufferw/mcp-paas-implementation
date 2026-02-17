@@ -25,4 +25,4 @@ jobs:
 
       - name: Run gateway tests
         run: |
-          pytest -q tests/test_gateway_policy.py tests/test_gateway_api.py tests/mcp_gateway/test_policy.py
+          pytest -q gateway_tests/test_gateway_policy.py gateway_tests/test_gateway_api.py
