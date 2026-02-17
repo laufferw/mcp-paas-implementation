@@ -56,7 +56,15 @@ Use the three gates in sequence:
 
 Reference: `docs/spec-build-verify-gates.md`
 
-## 7) Scope Discipline
+## 7) Context Checkpoints + Rollback Discipline
+For long-running workstreams:
+- create explicit checkpoints before major changes,
+- keep a short list of pinned non-negotiables,
+- rollback quickly when quality/evidence degrades.
+
+Reference: `docs/context-checkpoints-and-rollbacks.md`
+
+## 8) Scope Discipline
 - Keep changes surgical and focused on current goal.
 - Avoid broad refactors unless they unblock first-value directly.
 - Prefer incremental commits with clear validation notes.
