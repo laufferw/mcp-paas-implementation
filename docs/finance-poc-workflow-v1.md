@@ -6,7 +6,7 @@ Produce a governed close-prep package with clear mismatch findings, proposed act
 ## Actors
 - Finance Operator (tenant user)
 - Approver (controller/finance lead)
-- MCP Gateway (policy, routing, audit)
+- AgentGate (policy, routing, audit)
 - Upstream systems (accounting + spreadsheet/document source)
 
 ## Preconditions

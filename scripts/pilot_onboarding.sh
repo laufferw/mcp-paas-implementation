@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# MCP Gateway Pilot Onboarding Script (POC)
+# AgentGate Pilot Onboarding Script (POC)
 # Usage:
 #   ./scripts/pilot_onboarding.sh <base_url> <admin_token> <tenant_id> <tenant_token>
 # Example:

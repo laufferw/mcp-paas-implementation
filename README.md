@@ -1,6 +1,8 @@
-# MCP Gateway + Control Plane
+# AgentGate
 
-**MCP Gateway is an API-first, AI-first, agent-first control plane** for teams running ChatGPT-, Claude-, and custom-agent workflows over business APIs.
+**Policy-first control plane for AI agents over business APIs.**
+
+**AgentGate is an API-first, AI-first, agent-first control plane** for teams running ChatGPT-, Claude-, and custom-agent workflows over business APIs.
 
 The project keeps legacy APIs intact while adding persistent gateway control-plane capabilities under `/gateway/*`.
 

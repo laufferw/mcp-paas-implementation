@@ -1,6 +1,6 @@
 # Security-by-Default for Agent Operations
 
-MCP Gateway is designed so that policy and governance are core execution primitives, not optional add-ons.
+AgentGate is designed so that policy and governance are core execution primitives, not optional add-ons.
 
 ## Security principles
 1. **Deny by default**

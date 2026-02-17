@@ -1,14 +1,14 @@
 # Partner Demo Script v1 (Finance POC)
 
 ## Goal
-Show, in 15 minutes, that MCP Gateway delivers **API-first, AI-first, agent-first** workflow control with real governance.
+Show, in 15 minutes, that AgentGate delivers **API-first, AI-first, agent-first** workflow control with real governance.
 
 ## Demo flow
 
 ### 1) Open with problem (2 min)
 - Finance close workflows are fragmented and manual.
 - Agent automation is powerful but risky without controls.
-- MCP Gateway is the control plane: policy, routing, approvals, audit.
+- AgentGate is the control plane: policy, routing, approvals, audit.
 
 ### 2) Show architecture quickly (2 min)
 - Tenant-scoped token

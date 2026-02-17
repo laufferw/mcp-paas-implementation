@@ -1,4 +1,4 @@
-# Migration: Current MCP PaaS -> MCP Gateway + Control Plane
+# Migration: Current MCP PaaS -> AgentGate
 
 - Current: monolithic MCP PaaS API with context lifecycle/inference endpoints.
 - Target: gateway-centric architecture with control-plane APIs for servers, routes, and policies.

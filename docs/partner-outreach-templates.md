@@ -12,7 +12,7 @@ Would you be open to a 30-minute discussion to see if your team is a fit for a s
 ## 2) Cold outreach (short)
 Subject: Reduce close-prep effort with governed AI agents
 
-We’re building an **MCP Gateway**: an API-first control plane for AI agents in finance workflows.
+We’re building **AgentGate**: an API-first control plane for AI agents in finance workflows.
 
 Focus: month-end close and reconciliation prep with strict policy + auditability.
 

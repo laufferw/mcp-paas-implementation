@@ -1,10 +1,10 @@
-# MCP Gateway Pilot Brief
+# AgentGate Pilot Brief
 
 ## Title
 **API-First, AI-First, Agent-First Control Plane for Finance Operations**
 
 ## One-line positioning
-MCP Gateway is an **API-first agent control plane** that helps finance teams run AI agents safely across business systems with policy, approvals, and auditability.
+AgentGate is an **API-first agent control plane** that helps finance teams run AI agents safely across business systems with policy, approvals, and auditability.
 
 ## Why this pilot exists
 Most finance automation tools are still UI-first and workflow-fragmented. Agents need secure, policy-governed API access to deliver real operational value.

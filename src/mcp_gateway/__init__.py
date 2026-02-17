@@ -1,7 +1,7 @@
-"""MCP Gateway domain scaffolding.
+"""AgentGate domain scaffolding.
 
 This package contains incremental building blocks for evolving MCP PaaS into
-an MCP Gateway + Control Plane architecture.
+an AgentGate architecture.
 """
 
 from .policy import (

@@ -16,13 +16,13 @@ Increase relevance for queries like:
 
 ## Recommended copy pattern
 Use this structure consistently in README/docs:
-1. **What**: API-first MCP Gateway
+1. **What**: API-first AgentGate
 2. **Who**: teams running AI agents (ChatGPT, Claude, internal agents)
 3. **Why**: policy, approvals, auditability
 4. **Where**: finance workflows first, multi-vertical architecture
 
 ## Canonical positioning sentence
-"MCP Gateway is an API-first, AI-first, agent-first control plane that enables ChatGPT- and Claude-style agents to operate safely over business APIs with policy, routing, approvals, and auditability."
+"AgentGate is an API-first, AI-first, agent-first control plane that enables ChatGPT- and Claude-style agents to operate safely over business APIs with policy, routing, approvals, and auditability."
 
 ## Practical repository actions
 - Keep README opening paragraph aligned to core phrase cluster.

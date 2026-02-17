@@ -1,6 +1,6 @@
 # Execution Standards (API/AI/Agent-First Delivery)
 
-These standards are adopted to keep MCP Gateway work fast, reliable, and evidence-driven.
+These standards are adopted to keep AgentGate work fast, reliable, and evidence-driven.
 
 ## 1) First-Value Operating Loop
 For any multi-step feature or fix:
