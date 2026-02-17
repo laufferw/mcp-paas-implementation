@@ -2,8 +2,6 @@
 
 **MCP Gateway is an API-first, AI-first, agent-first control plane** for teams running ChatGPT-, Claude-, and custom-agent workflows over business APIs.
 
-This repository is transitioning from a model-context PaaS API into an **MCP Gateway + Control Plane**.
-
 The project keeps legacy APIs intact while adding persistent gateway control-plane capabilities under `/gateway/*`.
 
 ## Implemented so far
