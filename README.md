@@ -138,6 +138,7 @@ Before running pilot/demo flows:
 - `docs/target-account-scoring-model.md`
 - `docs/target-account-list-template.csv`
 - `docs/target-account-outreach-plan-next-10.md`
+- `docs/partner-ready-api-hardening-checklist.md`
 - `docs/execution-standards.md`
 - `docs/spec-build-verify-gates.md`
 - `docs/systematic-debugging-playbook.md`

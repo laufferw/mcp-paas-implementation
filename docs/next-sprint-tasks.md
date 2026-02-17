@@ -18,3 +18,29 @@
 - [ ] Implement real transport execution adapters (SSE/WS/stdio/streamable-http).
 - [ ] Add per-action audit log table and replay tooling.
 - [ ] Add integration tests with live ephemeral MCP upstream stubs.
+
+## API Hardening Sprint (Now)
+### First-value checkpoint (today)
+- [x] Run gateway policy/API tests in project venv (`3 passed`).
+- [x] Run preflight check and capture runtime readiness caveats.
+- [x] Produce partner-ready API hardening checklist with owners.
+
+### Workstream A — API contract hardening
+- [ ] Freeze request/response schemas for token, server, and dry-run endpoints.
+- [ ] Add schema examples to `docs/api_spec.yaml` + README snippets.
+- [ ] Add negative tests for malformed payloads and missing scopes.
+
+### Workstream B — Auth and token lifecycle
+- [ ] Add token expiry/rotation semantics and validation checks.
+- [ ] Document admin bootstrap vs tenant-operator lifecycle.
+- [ ] Add tests for expired/revoked token behavior.
+
+### Workstream C — Audit completeness
+- [ ] Expand audit report with per-step action trace and actor identity.
+- [ ] Add explicit event IDs and timestamps for replayability.
+- [ ] Add tests asserting required audit fields.
+
+### Workstream D — Integration credibility
+- [ ] Add one finance-adjacent upstream stub flow with deterministic fixture data.
+- [ ] Produce one fresh allow-path + one denied-path artifact bundle.
+- [ ] Update partner demo script to point to latest artifacts.
