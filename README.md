@@ -4,6 +4,18 @@
 
 The project keeps legacy APIs intact while adding persistent gateway control-plane capabilities under `/gateway/*`.
 
+## Security by Default (Agent Operations)
+
+- Deny-by-default policy decisions
+- Tenant-scoped RBAC tokens and explicit scopes
+- Transport validation by protocol type
+- Health-aware route selection
+- Audit-ready route decision output (reason + matched rule)
+
+See:
+- `docs/security-by-default.md`
+- `docs/control-guarantees.md`
+
 ## Implemented so far
 
 ### Phase 1
@@ -125,3 +137,5 @@ Before running pilot/demo flows:
 - `docs/target-account-list-template.csv`
 - `docs/target-account-outreach-plan-next-10.md`
 - `docs/execution-standards.md`
+- `docs/security-by-default.md`
+- `docs/control-guarantees.md`
