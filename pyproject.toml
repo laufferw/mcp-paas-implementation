@@ -45,6 +45,9 @@ dev = [
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
+filterwarnings = [
+    'ignore:Please use `import python_multipart` instead\.:PendingDeprecationWarning',
+]
 
 [tool.black]
 line-length = 88
