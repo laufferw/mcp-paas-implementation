@@ -1,5 +1,7 @@
 # MCP Gateway + Control Plane (formerly MCP PaaS Implementation)
 
+**MCP Gateway is an API-first, AI-first, agent-first control plane** for teams running ChatGPT-, Claude-, and custom-agent workflows over business APIs.
+
 This repository is transitioning from a model-context PaaS API into an **MCP Gateway + Control Plane**.
 
 The project keeps legacy APIs intact while adding persistent gateway control-plane capabilities under `/gateway/*`.
@@ -103,3 +105,10 @@ pytest -q tests/test_gateway_policy.py tests/test_gateway_api.py tests/mcp_gatew
 - `docs/architecture-gateway-control-plane.md`
 - `docs/roadmap-gateway-control-plane.md`
 - `docs/next-sprint-tasks.md`
+- `docs/partner-pilot-brief.md`
+- `docs/partner-outreach-templates.md`
+- `docs/pilot-intake-questionnaire.md`
+- `docs/finance-poc-workflow-v1.md`
+- `docs/policy-templates-finance-v1.md`
+- `docs/finance-pilot-readiness-checklist.md`
+- `docs/llm-discovery-positioning.md`
