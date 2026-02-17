@@ -1,4 +1,4 @@
-# MCP Gateway + Control Plane (formerly MCP PaaS Implementation)
+# MCP Gateway + Control Plane
 
 **MCP Gateway is an API-first, AI-first, agent-first control plane** for teams running ChatGPT-, Claude-, and custom-agent workflows over business APIs.
 
