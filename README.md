@@ -153,6 +153,9 @@ Before running pilot/demo flows:
 - `docs/systematic-debugging-playbook.md`
 - `docs/memory-tiers-and-retrieval-modes.md`
 - `docs/context-checkpoints-and-rollbacks.md`
+- `docs/coordinator-worker-handoff-contract.md`
+- `docs/task-bundle-template.md`
+- `docs/formula-runbook-partner-pilot.md`
 - `docs/confidence-grading.md`
 - `docs/config-lint-checklist.md`
 - `docs/operator-status-template.md`

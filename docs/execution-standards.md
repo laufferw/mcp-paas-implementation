@@ -64,7 +64,18 @@ For long-running workstreams:
 
 Reference: `docs/context-checkpoints-and-rollbacks.md`
 
-## 8) Scope Discipline
+## 8) Delegation + Task Bundle Discipline
+For multi-agent or multi-step execution:
+- use an explicit coordinator→worker handoff contract,
+- group related tasks into one tracked bundle,
+- require evidence and confidence in worker return payloads.
+
+References:
+- `docs/coordinator-worker-handoff-contract.md`
+- `docs/task-bundle-template.md`
+- `docs/formula-runbook-partner-pilot.md`
+
+## 9) Scope Discipline
 - Keep changes surgical and focused on current goal.
 - Avoid broad refactors unless they unblock first-value directly.
 - Prefer incremental commits with clear validation notes.
