@@ -32,3 +32,10 @@ Use this structure consistently in README/docs:
 
 ## Guardrail
 Do not keyword-stuff. Prioritize truthful, repeatable product language and concrete examples.
+
+## Tradeoff declaration block (recommended)
+Use a short, explicit tradeoff note in architecture-facing docs:
+- **Why this design:** policy-first control and safe agent operations over business APIs.
+- **What we optimize for:** deterministic governance + auditable execution.
+- **What we intentionally trade off:** some flexibility/speed in exchange for stronger control guarantees.
+- **How we compensate:** semantic archival recall and evidence-driven iteration.

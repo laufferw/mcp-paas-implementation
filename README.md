@@ -141,6 +141,7 @@ Before running pilot/demo flows:
 - `docs/execution-standards.md`
 - `docs/spec-build-verify-gates.md`
 - `docs/systematic-debugging-playbook.md`
+- `docs/memory-tiers-and-retrieval-modes.md`
 - `docs/confidence-grading.md`
 - `docs/config-lint-checklist.md`
 - `docs/operator-status-template.md`
