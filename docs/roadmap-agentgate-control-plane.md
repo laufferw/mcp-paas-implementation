@@ -1,4 +1,4 @@
-# Phased Roadmap
+# AgentGate Phased Roadmap
 
 ## Phase 0 (done)
 - Gateway package scaffolding and non-breaking `/gateway/*` endpoints.

@@ -1,4 +1,4 @@
-# Architecture (Initial Slice)
+# AgentGate Architecture (Initial Slice)
 
 ## New gateway domain (`src/mcp_gateway`)
 - `transport_adapters.py`: transport protocol + HTTP adapter scaffold.

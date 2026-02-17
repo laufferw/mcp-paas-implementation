@@ -122,8 +122,8 @@ Before running pilot/demo flows:
 ## Directional docs
 
 - `docs/migration-current-to-target.md`
-- `docs/architecture-gateway-control-plane.md`
-- `docs/roadmap-gateway-control-plane.md`
+- `docs/architecture-agentgate-control-plane.md`
+- `docs/roadmap-agentgate-control-plane.md`
 - `docs/next-sprint-tasks.md`
 - `docs/partner-pilot-brief.md`
 - `docs/partner-outreach-templates.md`
