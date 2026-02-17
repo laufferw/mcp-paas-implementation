@@ -110,3 +110,6 @@ pytest -q tests/test_gateway_policy.py tests/test_gateway_api.py tests/mcp_gatew
 - `docs/policy-templates-finance-v1.md`
 - `docs/finance-pilot-readiness-checklist.md`
 - `docs/llm-discovery-positioning.md`
+- `docs/partner-demo-script-v1.md`
+- `docs/partner-first-call-checklist.md`
+- `docs/pilot-kickoff-agenda-v1.md`
