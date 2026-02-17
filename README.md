@@ -94,7 +94,15 @@ curl -X POST http://localhost:8000/gateway/routes/dry-run \
 ## Tests
 
 ```bash
-pytest -q tests/test_gateway_policy.py tests/test_gateway_api.py tests/mcp_gateway/test_policy.py
+pytest -q gateway_tests/test_gateway_policy.py gateway_tests/test_gateway_api.py
+```
+
+## Preflight
+
+Before running pilot/demo flows:
+
+```bash
+./scripts/preflight_check.sh http://localhost:8000
 ```
 
 ## Directional docs
@@ -116,3 +124,4 @@ pytest -q tests/test_gateway_policy.py tests/test_gateway_api.py tests/mcp_gatew
 - `docs/target-account-scoring-model.md`
 - `docs/target-account-list-template.csv`
 - `docs/target-account-outreach-plan-next-10.md`
+- `docs/execution-standards.md`

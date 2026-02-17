@@ -3,6 +3,14 @@
 ## Objective
 Run one full internal pilot cycle end-to-end and produce evidence artifacts we can show design partners.
 
+## First-value checkpoint (binary)
+Within 30 minutes, confirm all three:
+1. onboarding succeeds,
+2. one allowed route decision is captured,
+3. one denied route decision is captured.
+
+If any checkpoint fails, pause expansion and fix blocker first.
+
 ## Inputs
 - Gateway running locally
 - Admin token configured (`MCP_GATEWAY_ADMIN_TOKEN`)
