@@ -10,6 +10,7 @@ ADMIN_TOKEN="${2:-dev-gateway-token}"
 TENANT_ID="${3:-tenant-a}"
 TENANT_TOKEN="${4:-tenant-a-token}"
 TODAY="$(date -u +%Y-%m-%d)"
+RUN_TS="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 OUTDIR="pilot-artifacts/${TODAY}"
 
 mkdir -p "$OUTDIR"
@@ -33,12 +34,30 @@ curl -sS -X POST "$BASE_URL/gateway/routes/dry-run" \
   -d "{\"tenant_id\":\"$TENANT_ID\",\"action\":\"plan\",\"strategy\":\"weighted\"}" \
   > "$OUTDIR/weighted-dry-run.json"
 
-log "Writing placeholder pilot artifacts"
+log "Running denied-path dry-run (unknown server)"
+curl -sS -X POST "$BASE_URL/gateway/routes/dry-run" \
+  -H "Content-Type: application/json" \
+  -H "x-gateway-token: $TENANT_TOKEN" \
+  -d "{\"tenant_id\":\"$TENANT_ID\",\"action\":\"plan\",\"server_id\":\"missing-server\"}" \
+  > "$OUTDIR/denied-dry-run.json"
+
+# Assert denied-path is actually denied.
+python3 - <<'PY' "$OUTDIR/denied-dry-run.json"
+import json,sys
+p=sys.argv[1]
+obj=json.load(open(p))
+if obj.get("allowed") is True:
+    raise SystemExit("Denied-path check failed: expected allowed=false")
+print("Denied-path assertion passed")
+PY
+
+log "Writing pilot artifacts"
 cat > "$OUTDIR/reconciliation-summary.md" <<'EOF'
 # Reconciliation Summary (Day-1 Internal Pilot)
 
 - Internal pilot run completed.
 - Route planning executed (failover + weighted).
+- Denied-path control check executed and passed.
 - Next: replace placeholders with real mismatch analysis from integrated systems.
 EOF
 
@@ -60,19 +79,68 @@ cat > "$OUTDIR/approval-log.json" <<'EOF'
 }
 EOF
 
-cat > "$OUTDIR/audit-report.json" <<EOF
-{
-  "tenantId": "$TENANT_ID",
-  "generatedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+log "Building enriched audit report"
+python3 - <<'PY' "$OUTDIR" "$TENANT_ID" "$RUN_TS"
+import json,sys,os
+outdir,tenant,run_ts=sys.argv[1],sys.argv[2],sys.argv[3]
+
+
+def load(name):
+    with open(os.path.join(outdir,name),"r") as f:
+        return json.load(f)
+
+failover=load("failover-dry-run.json")
+weighted=load("weighted-dry-run.json")
+denied=load("denied-dry-run.json")
+proposed=load("proposed-actions.json")
+approvals=load("approval-log.json")
+
+report={
+  "runId": f"day1-{run_ts}",
+  "tenantId": tenant,
+  "generatedAt": run_ts,
+  "summary": {
+    "allowCount": sum(1 for r in [failover,weighted,denied] if r.get("allowed") is True),
+    "denyCount": sum(1 for r in [failover,weighted,denied] if r.get("allowed") is False),
+    "proposedActionCount": len(proposed.get("actions",[])),
+    "approvalCount": len(approvals.get("approvals",[]))
+  },
+  "routeDecisions": {
+    "failover": {
+      "decision": failover.get("decision"),
+      "reason": failover.get("reason"),
+      "matchedRule": failover.get("matched_rule"),
+      "selectedServerId": failover.get("selected_server_id"),
+      "strategy": failover.get("strategy")
+    },
+    "weighted": {
+      "decision": weighted.get("decision"),
+      "reason": weighted.get("reason"),
+      "matchedRule": weighted.get("matched_rule"),
+      "selectedServerId": weighted.get("selected_server_id"),
+      "strategy": weighted.get("strategy")
+    },
+    "deniedPath": {
+      "decision": denied.get("decision"),
+      "reason": denied.get("reason"),
+      "matchedRule": denied.get("matched_rule"),
+      "selectedServerId": denied.get("selected_server_id"),
+      "strategy": denied.get("strategy")
+    }
+  },
   "artifacts": [
     "onboarding.log",
     "failover-dry-run.json",
     "weighted-dry-run.json",
+    "denied-dry-run.json",
     "reconciliation-summary.md",
     "proposed-actions.json",
     "approval-log.json"
   ]
 }
-EOF
+
+with open(os.path.join(outdir,"audit-report.json"),"w") as f:
+    json.dump(report,f,indent=2)
+PY
 
 log "Done. Artifacts written to $OUTDIR"

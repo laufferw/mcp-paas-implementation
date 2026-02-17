@@ -13,6 +13,7 @@ from sqlalchemy import (
     String,
     Table,
     Text,
+    UniqueConstraint,
     create_engine,
 )
 from sqlalchemy.ext.declarative import declarative_base
@@ -105,7 +106,7 @@ class ModelVersion(Base):
 
     # Ensure unique version per model
     __table_args__ = (
-        sqlalchemy.UniqueConstraint('model_id', 'version', name='unique_model_version'),
+        UniqueConstraint('model_id', 'version', name='unique_model_version'),
     )
 
     def __repr__(self):

@@ -37,7 +37,8 @@ Create folder `pilot-artifacts/YYYY-MM-DD/` with:
 - `reconciliation-summary.md`
 - `proposed-actions.json`
 - `approval-log.json`
-- `audit-report.json`
+- `denied-dry-run.json`
+- `audit-report.json` (enriched with route decisions, matched rules, allow/deny counts)
 
 ## Step 4 — Evaluate against POC criteria
 - Any unauthorized action allowed? (must be no)
