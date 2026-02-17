@@ -80,7 +80,12 @@ def test_flow_register_rule_and_dry_run(tmp_path) -> None:
         headers={"x-gateway-token": "tenant-a-token"},
     )
     assert dry.status_code == 200
-    assert dry.json()["allowed"] is True
+    body = dry.json()
+    assert body["allowed"] is True
+    assert body["event_id"]
+    assert body["decided_at"]
+    assert body["actor"]["subject_id"] == "tenant-a-op"
+    assert body["request"]["tenant_id"] == "tenant-a"
 
 
 def test_missing_scope_returns_403(tmp_path) -> None:

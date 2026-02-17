@@ -36,9 +36,9 @@
 - [ ] Add tests for expired/revoked token behavior.
 
 ### Workstream C — Audit completeness
-- [ ] Expand audit report with per-step action trace and actor identity.
-- [ ] Add explicit event IDs and timestamps for replayability.
-- [ ] Add tests asserting required audit fields.
+- [x] Expand audit report with per-step action trace and actor identity.
+- [x] Add explicit event IDs and timestamps for replayability.
+- [x] Add tests asserting required audit fields.
 
 ### Workstream D — Integration credibility
 - [ ] Add one finance-adjacent upstream stub flow with deterministic fixture data.

@@ -95,6 +95,26 @@ denied=load("denied-dry-run.json")
 proposed=load("proposed-actions.json")
 approvals=load("approval-log.json")
 
+def decision_entry(name, obj):
+    return {
+      "step": name,
+      "eventId": obj.get("event_id"),
+      "decidedAt": obj.get("decided_at"),
+      "actor": obj.get("actor"),
+      "request": obj.get("request"),
+      "decision": obj.get("decision"),
+      "reason": obj.get("reason"),
+      "matchedRule": obj.get("matched_rule"),
+      "selectedServerId": obj.get("selected_server_id"),
+      "strategy": obj.get("strategy")
+    }
+
+trace = [
+  decision_entry("failover", failover),
+  decision_entry("weighted", weighted),
+  decision_entry("deniedPath", denied),
+]
+
 report={
   "runId": f"day1-{run_ts}",
   "tenantId": tenant,
@@ -105,29 +125,15 @@ report={
     "proposedActionCount": len(proposed.get("actions",[])),
     "approvalCount": len(approvals.get("approvals",[]))
   },
-  "routeDecisions": {
-    "failover": {
-      "decision": failover.get("decision"),
-      "reason": failover.get("reason"),
-      "matchedRule": failover.get("matched_rule"),
-      "selectedServerId": failover.get("selected_server_id"),
-      "strategy": failover.get("strategy")
-    },
-    "weighted": {
-      "decision": weighted.get("decision"),
-      "reason": weighted.get("reason"),
-      "matchedRule": weighted.get("matched_rule"),
-      "selectedServerId": weighted.get("selected_server_id"),
-      "strategy": weighted.get("strategy")
-    },
-    "deniedPath": {
-      "decision": denied.get("decision"),
-      "reason": denied.get("reason"),
-      "matchedRule": denied.get("matched_rule"),
-      "selectedServerId": denied.get("selected_server_id"),
-      "strategy": denied.get("strategy")
-    }
+  "actors": {
+    "dryRunActor": (failover.get("actor") or weighted.get("actor") or denied.get("actor")),
   },
+  "routeDecisions": {
+    "failover": decision_entry("failover", failover),
+    "weighted": decision_entry("weighted", weighted),
+    "deniedPath": decision_entry("deniedPath", denied)
+  },
+  "actionTrace": trace,
   "artifacts": [
     "onboarding.log",
     "failover-dry-run.json",

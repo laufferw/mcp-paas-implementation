@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Literal
+from uuid import uuid4
 
 from fastapi import APIRouter, Header, HTTPException, Query
 from fastapi.responses import Response
@@ -273,33 +275,54 @@ async def revoke_access_token(token: str, x_gateway_token: str | None = Header(d
     return {"status": "ok", "token": token, "revoked": True}
 
 
+def _dry_run_audit_fields(actor: AccessToken, tenant_id: str, action: str) -> dict:
+    return {
+        "event_id": str(uuid4()),
+        "decided_at": datetime.now(timezone.utc).isoformat(),
+        "actor": {
+            "subject_id": actor.subject_id,
+            "role": actor.role,
+            "tenant_id": actor.tenant_id,
+        },
+        "request": {
+            "tenant_id": tenant_id,
+            "action": action,
+        },
+    }
+
+
 @router.post("/routes/dry-run")
 async def route_dry_run(payload: RouteDryRunRequest, x_gateway_token: str | None = Header(default=None)) -> dict:
     actor = _require_actor(x_gateway_token)
     require_scope(actor, "gateway:plan", tenant_id=payload.tenant_id)
+    audit = _dry_run_audit_fields(actor=actor, tenant_id=payload.tenant_id, action=payload.action)
 
     target_server = registry.get(payload.server_id) if payload.server_id else None
 
     if payload.server_id and target_server is None:
         metrics.observe_dry_run("deny")
         return {
+            **audit,
             "allowed": False,
             "decision": PolicyDecision.DENY.value,
             "reason": "deny: target server not registered",
             "matched_rule": None,
             "selected_server_id": None,
             "server_healthy": None,
+            "strategy": payload.strategy,
         }
 
     if target_server and not target_server.healthy:
         metrics.observe_dry_run("deny")
         return {
+            **audit,
             "allowed": False,
             "decision": PolicyDecision.DENY.value,
             "reason": "deny: target server unhealthy",
             "matched_rule": None,
             "selected_server_id": target_server.server_id,
             "server_healthy": False,
+            "strategy": payload.strategy,
         }
 
     selected = target_server or registry.pick_server(
@@ -312,12 +335,14 @@ async def route_dry_run(payload: RouteDryRunRequest, x_gateway_token: str | None
     if selected is None:
         metrics.observe_dry_run("deny")
         return {
+            **audit,
             "allowed": False,
             "decision": PolicyDecision.DENY.value,
             "reason": "deny: no healthy server available for tenant",
             "matched_rule": None,
             "selected_server_id": None,
             "server_healthy": None,
+            "strategy": payload.strategy,
         }
 
     request = PolicyRequest(
@@ -329,6 +354,7 @@ async def route_dry_run(payload: RouteDryRunRequest, x_gateway_token: str | None
     metrics.observe_dry_run(evaluation.decision.value)
 
     return {
+        **audit,
         "allowed": evaluation.decision == PolicyDecision.ALLOW,
         "decision": evaluation.decision.value,
         "reason": evaluation.reason,
