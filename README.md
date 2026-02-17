@@ -113,3 +113,6 @@ pytest -q tests/test_gateway_policy.py tests/test_gateway_api.py tests/mcp_gatew
 - `docs/partner-demo-script-v1.md`
 - `docs/partner-first-call-checklist.md`
 - `docs/pilot-kickoff-agenda-v1.md`
+- `docs/target-account-scoring-model.md`
+- `docs/target-account-list-template.csv`
+- `docs/target-account-outreach-plan-next-10.md`
