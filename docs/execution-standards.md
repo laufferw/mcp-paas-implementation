@@ -48,7 +48,15 @@ Use this format in updates:
 - Evidence (artifact/log/command)
 - Next action
 
-## 6) Scope Discipline
+## 6) Gate-Driven Delivery
+Use the three gates in sequence:
+1. **Spec Gate** (problem, criteria, constraints, out-of-scope)
+2. **Build Gate** (micro-tasks + surgical execution)
+3. **Verify Gate** (preflight + tests + proof artifacts)
+
+Reference: `docs/spec-build-verify-gates.md`
+
+## 7) Scope Discipline
 - Keep changes surgical and focused on current goal.
 - Avoid broad refactors unless they unblock first-value directly.
 - Prefer incremental commits with clear validation notes.
