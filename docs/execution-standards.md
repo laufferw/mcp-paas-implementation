@@ -36,7 +36,19 @@ For partner-facing pilot workflows, every run must include:
 - at least one denied-path route proof
 - audit report with decision reason + matched rule + selected route
 
-## 5) Scope Discipline
+## 5) Confidence-Graded Findings
+Classify findings using confidence levels:
+- **HIGH**: reproducible, strong evidence, low ambiguity
+- **MEDIUM**: likely valid but context-dependent
+- **LOW**: hypothesis needing more evidence
+
+Use this format in updates:
+- Finding
+- Confidence (HIGH/MEDIUM/LOW)
+- Evidence (artifact/log/command)
+- Next action
+
+## 6) Scope Discipline
 - Keep changes surgical and focused on current goal.
 - Avoid broad refactors unless they unblock first-value directly.
 - Prefer incremental commits with clear validation notes.

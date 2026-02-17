@@ -139,5 +139,8 @@ Before running pilot/demo flows:
 - `docs/target-account-list-template.csv`
 - `docs/target-account-outreach-plan-next-10.md`
 - `docs/execution-standards.md`
+- `docs/confidence-grading.md`
+- `docs/config-lint-checklist.md`
+- `docs/operator-status-template.md`
 - `docs/security-by-default.md`
 - `docs/control-guarantees.md`
