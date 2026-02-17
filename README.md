@@ -71,6 +71,15 @@ Run the API:
 uvicorn mcp_paas.server:app --reload
 ```
 
+## API contract examples
+
+Canonical schema contract is defined in `docs/api_spec.yaml`.
+
+Error semantics to rely on:
+- `401` missing/invalid `x-gateway-token`
+- `403` role/scope/tenant violation
+- `422` malformed payload or invalid enum/range
+
 ## Phase 2 example flow
 
 ```bash
