@@ -91,6 +91,7 @@ class AccessTokenCreate(BaseModel):
     role: Literal["admin", "tenant-operator", "reader"] = "reader"
     scopes: list[str] = Field(default_factory=list)
     enabled: bool = True
+    expires_at: str | None = None
 
 
 @router.get("/health")
@@ -254,9 +255,22 @@ async def create_access_token(payload: AccessTokenCreate, x_gateway_token: str |
             role=payload.role,
             scopes=set(payload.scopes),
             enabled=payload.enabled,
+            expires_at=payload.expires_at,
         )
     )
     return {"status": "ok", "subject_id": payload.subject_id}
+
+
+@router.post("/access/tokens/{token}/revoke")
+async def revoke_access_token(token: str, x_gateway_token: str | None = Header(default=None)) -> dict:
+    actor = _require_actor(x_gateway_token)
+    if actor.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin role required")
+
+    revoked = authz.revoke_token(token)
+    if not revoked:
+        raise HTTPException(status_code=404, detail="Token not found")
+    return {"status": "ok", "token": token, "revoked": True}
 
 
 @router.post("/routes/dry-run")

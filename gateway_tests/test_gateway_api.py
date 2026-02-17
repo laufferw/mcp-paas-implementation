@@ -1,6 +1,7 @@
 import importlib
 import os
 import sys
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -131,3 +132,42 @@ def test_malformed_payload_returns_422(tmp_path) -> None:
         headers={"x-gateway-token": "tenant-a-token"},
     )
     assert response.status_code == 422
+
+
+def test_expired_token_returns_403(tmp_path) -> None:
+    client = _build_client(tmp_path)
+
+    expired_at = (datetime.now(timezone.utc) - timedelta(minutes=1)).isoformat()
+    token_resp = client.post(
+        "/gateway/access/tokens",
+        json={
+            "token": "expired-token",
+            "subject_id": "tenant-a-expired",
+            "tenant_id": "tenant-a",
+            "role": "tenant-operator",
+            "scopes": ["gateway:read"],
+            "expires_at": expired_at,
+        },
+        headers={"x-gateway-token": "test-admin"},
+    )
+    assert token_resp.status_code == 200
+
+    response = client.get("/gateway/servers", headers={"x-gateway-token": "expired-token"})
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Token expired"
+
+
+def test_revoked_token_returns_403(tmp_path) -> None:
+    client = _build_client(tmp_path)
+    _create_tenant_operator(client, token="revocable-token")
+
+    revoke = client.post(
+        "/gateway/access/tokens/revocable-token/revoke",
+        headers={"x-gateway-token": "test-admin"},
+    )
+    assert revoke.status_code == 200
+    assert revoke.json()["revoked"] is True
+
+    response = client.get("/gateway/servers", headers={"x-gateway-token": "revocable-token"})
+    assert response.status_code == 403
+    assert response.json()["detail"] in ("Gateway token disabled", "Token disabled", "Token revoked")

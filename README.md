@@ -77,7 +77,7 @@ Canonical schema contract is defined in `docs/api_spec.yaml`.
 
 Error semantics to rely on:
 - `401` missing/invalid `x-gateway-token`
-- `403` role/scope/tenant violation
+- `403` role/scope/tenant violation (including expired/revoked tokens)
 - `422` malformed payload or invalid enum/range
 
 ## Phase 2 example flow

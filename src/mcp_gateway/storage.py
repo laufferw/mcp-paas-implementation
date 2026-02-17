@@ -70,6 +70,9 @@ class GatewayStorage:
                 )
                 """
             )
+            self._ensure_column(conn, "gateway_access_tokens", "expires_at", "expires_at TEXT")
+            self._ensure_column(conn, "gateway_access_tokens", "revoked_at", "revoked_at TEXT")
+            self._ensure_column(conn, "gateway_access_tokens", "updated_at", "updated_at TEXT")
             conn.commit()
 
     def execute(self, query: str, params: Iterable[Any] = ()) -> None:

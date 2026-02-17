@@ -18,6 +18,8 @@ class AccessToken:
     tenant_id: str | None = None
     scopes: Set[str] = field(default_factory=set)
     enabled: bool = True
+    expires_at: str | None = None
+    revoked_at: str | None = None
 
 
 class AuthzStore:
@@ -25,16 +27,22 @@ class AuthzStore:
         self.storage = storage
 
     def upsert_token(self, token: AccessToken) -> None:
+        now = datetime.now(timezone.utc).isoformat()
         self.storage.execute(
             """
-            INSERT INTO gateway_access_tokens(token, subject_id, tenant_id, role, scopes_json, enabled, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO gateway_access_tokens(
+                token, subject_id, tenant_id, role, scopes_json, enabled, created_at, expires_at, revoked_at, updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(token) DO UPDATE SET
                 subject_id=excluded.subject_id,
                 tenant_id=excluded.tenant_id,
                 role=excluded.role,
                 scopes_json=excluded.scopes_json,
-                enabled=excluded.enabled
+                enabled=excluded.enabled,
+                expires_at=excluded.expires_at,
+                revoked_at=excluded.revoked_at,
+                updated_at=excluded.updated_at
             """,
             (
                 token.token,
@@ -43,7 +51,10 @@ class AuthzStore:
                 token.role,
                 json.dumps(sorted(token.scopes)),
                 1 if token.enabled else 0,
-                datetime.now(timezone.utc).isoformat(),
+                now,
+                token.expires_at,
+                token.revoked_at,
+                now,
             ),
         )
 
@@ -61,12 +72,37 @@ class AuthzStore:
             tenant_id=row["tenant_id"],
             scopes=set(json.loads(row["scopes_json"] or "[]")),
             enabled=bool(row["enabled"]),
+            expires_at=row["expires_at"],
+            revoked_at=row["revoked_at"],
         )
+
+    def revoke_token(self, raw_token: str) -> bool:
+        now = datetime.now(timezone.utc).isoformat()
+        existing = self.storage.query_one("SELECT token FROM gateway_access_tokens WHERE token = ?", (raw_token,))
+        if existing is None:
+            return False
+        self.storage.execute(
+            """
+            UPDATE gateway_access_tokens
+            SET enabled = 0, revoked_at = ?, updated_at = ?
+            WHERE token = ?
+            """,
+            (now, now, raw_token),
+        )
+        return True
 
 
 def require_scope(token: AccessToken, scope: str, tenant_id: str | None = None) -> None:
     if not token.enabled:
         raise HTTPException(status_code=403, detail="Token disabled")
+
+    if token.revoked_at:
+        raise HTTPException(status_code=403, detail="Token revoked")
+
+    if token.expires_at:
+        expires = datetime.fromisoformat(token.expires_at.replace("Z", "+00:00"))
+        if datetime.now(timezone.utc) >= expires:
+            raise HTTPException(status_code=403, detail="Token expired")
 
     if token.role == "admin":
         return

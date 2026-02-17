@@ -59,6 +59,37 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /gateway/access/tokens/{token}/revoke:
+    post:
+      tags: [Auth]
+      summary: Revoke access token (admin only)
+      parameters:
+        - $ref: '#/components/parameters/XGatewayToken'
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Revoked
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: ok }
+                  token: { type: string }
+                  revoked: { type: boolean, example: true }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: Token not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   /gateway/servers:
     get:
       tags: [Gateway]
@@ -206,6 +237,10 @@ components:
         enabled:
           type: boolean
           default: true
+        expires_at:
+          type: string
+          nullable: true
+          description: ISO-8601 UTC timestamp after which token is rejected
 
     RegisterServerRequest:
       type: object
