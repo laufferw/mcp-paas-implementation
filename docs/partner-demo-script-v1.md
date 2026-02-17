@@ -24,8 +24,10 @@ Show, in 15 minutes, that AgentGate delivers **API-first, AI-first, agent-first*
 - Show denied-path dry-run (deny)
 
 ### 4) Show trust evidence (3 min)
-- Open `audit-report.json`
-- Highlight matched rule, reason, selected server, allow/deny counts
+- Open latest artifact bundle in `pilot-artifacts/YYYY-MM-DD/`
+- Start with `audit-report.json`
+- Highlight event id/time, actor identity, matched rule, reason, selected server, allow/deny counts
+- Optionally show `actionTrace` entries for replay-style review
 - Emphasize: no unauthorized execution path
 
 ### 5) Close with value (2 min)
