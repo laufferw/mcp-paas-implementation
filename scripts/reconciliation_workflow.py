@@ -17,7 +17,7 @@ from __future__ import annotations
 import json
 import sys
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Any, Dict, List
@@ -56,7 +56,7 @@ audit_trail: List[AuditEntry] = []
 
 def audit(action: str, detail: str, decision: str = "n/a"):
     entry = AuditEntry(
-        timestamp=datetime.utcnow().isoformat() + "Z",
+        timestamp=datetime.now(timezone.utc).isoformat() + "Z",
         action=action,
         detail=detail,
         policy_decision=decision,
@@ -85,7 +85,7 @@ MOCK_PAYMENTS = [
 def main():
     heading(f"Month-End Reconciliation — {PERIOD}")
     print(f"  Period : {PERIOD_START} to {PERIOD_END}")
-    print(f"  Run at : {datetime.utcnow().isoformat()}Z")
+    print(f"  Run at : {datetime.now(timezone.utc).isoformat()}Z")
 
     spec_path = Path(__file__).resolve().parent.parent / "docs" / "specs" / "quickbooks-online-v3.json"
     spec = json.loads(spec_path.read_text())
@@ -224,7 +224,7 @@ result = sorted(set(results))
     print(f"""
   Company         : Demo Company (Realm 1234567890)
   Period          : {PERIOD_START} — {PERIOD_END}
-  Generated       : {datetime.utcnow().isoformat()}Z
+  Generated       : {datetime.now(timezone.utc).isoformat()}Z
 
   ┌──────────────────────────────────────────────┐
   │  Invoices issued          : {len(MOCK_INVOICES):>6}            │
