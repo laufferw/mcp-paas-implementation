@@ -85,6 +85,48 @@ List audit events for the authenticated tenant.
 
 **Response:** `{ "items": [ { "event_id", "action", "code", "result", "status", ... } ] }`
 
+## Real API Integration — QuickBooks Online
+
+Code Mode really shines against large, real-world API specs. The QuickBooks Online V3 spec has **166 endpoints** and weighs **1.1 MB** (~280k tokens). Stuffing it into an LLM context window is expensive and often impossible.
+
+With Code Mode, an agent searches the spec programmatically and only receives the handful of endpoints it needs — using **~1,000 tokens** instead of 280,000. That's a **99.6% reduction**.
+
+### Setup
+
+```bash
+# .env — QuickBooks Online credentials
+QBO_CLIENT_ID=your_client_id
+QBO_CLIENT_SECRET=your_client_secret
+QBO_REALM_ID=1234567890          # Company ID from QBO
+QBO_REDIRECT_URI=http://localhost:8000/callback
+QBO_ENVIRONMENT=sandbox          # sandbox or production
+QBO_ACCESS_TOKEN=                # filled after OAuth flow
+QBO_REFRESH_TOKEN=               # filled after OAuth flow
+```
+
+### Demos (no credentials needed)
+
+```bash
+# Token savings demo — searches the real 1.1 MB spec
+python scripts/demo_quickbooks_codemode.py
+
+# Month-end reconciliation workflow
+python scripts/reconciliation_workflow.py
+```
+
+### Using the client in code
+
+```python
+from src.mcp_gateway.integrations.quickbooks import QuickBooksClient, QuickBooksConfig
+
+config = QuickBooksConfig.from_env()
+client = QuickBooksClient(config)
+
+# QBO query language
+invoices = client.query("Invoice", "Balance > '0'")
+report = client.report("ProfitAndLoss", {"start_date": "2026-01-01", "end_date": "2026-01-31"})
+```
+
 ### `POST /gateway/codemode/approve/{event_id}`
 
 Admin-only. Approve and execute a pending operation.
