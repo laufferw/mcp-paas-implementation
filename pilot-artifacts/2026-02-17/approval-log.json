@@ -1,0 +1,6 @@
+{
+  "approvals": [
+    {"actionId": "act-1", "decision": "pending"},
+    {"actionId": "act-2", "decision": "pending"}
+  ]
+}

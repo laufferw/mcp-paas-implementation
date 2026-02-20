@@ -1,0 +1,43 @@
+{
+  "runId": "day1-2026-02-17T01:09:53Z",
+  "tenantId": "tenant-a",
+  "generatedAt": "2026-02-17T01:09:53Z",
+  "summary": {
+    "allowCount": 2,
+    "denyCount": 1,
+    "proposedActionCount": 2,
+    "approvalCount": 2
+  },
+  "routeDecisions": {
+    "failover": {
+      "decision": "allow",
+      "reason": "allow by rule 'allow-tenant-a-plan'",
+      "matchedRule": "allow-tenant-a-plan",
+      "selectedServerId": "tenant-a-acct-backup",
+      "strategy": "failover"
+    },
+    "weighted": {
+      "decision": "allow",
+      "reason": "allow by rule 'allow-tenant-a-plan'",
+      "matchedRule": "allow-tenant-a-plan",
+      "selectedServerId": "tenant-a-acct-primary",
+      "strategy": "weighted"
+    },
+    "deniedPath": {
+      "decision": "deny",
+      "reason": "deny: target server not registered",
+      "matchedRule": null,
+      "selectedServerId": null,
+      "strategy": null
+    }
+  },
+  "artifacts": [
+    "onboarding.log",
+    "failover-dry-run.json",
+    "weighted-dry-run.json",
+    "denied-dry-run.json",
+    "reconciliation-summary.md",
+    "proposed-actions.json",
+    "approval-log.json"
+  ]
+}

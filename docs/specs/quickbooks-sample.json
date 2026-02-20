@@ -1,0 +1,501 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "QuickBooks-Style Finance API",
+    "description": "Sample finance API spec for testing MCP Gateway Code Mode search and execution.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    { "url": "https://api.example.com/v1", "description": "Production" }
+  ],
+  "paths": {
+    "/invoices": {
+      "get": {
+        "operationId": "listInvoices",
+        "summary": "List invoices",
+        "description": "Returns a paginated list of invoices for the authenticated company.",
+        "parameters": [
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "per_page", "in": "query", "schema": { "type": "integer", "default": 25 } },
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["draft", "sent", "paid", "overdue", "voided"] } },
+          { "name": "customer_id", "in": "query", "schema": { "type": "string" } },
+          { "name": "date_from", "in": "query", "schema": { "type": "string", "format": "date" } },
+          { "name": "date_to", "in": "query", "schema": { "type": "string", "format": "date" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of invoices",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": { "type": "array", "items": { "$ref": "#/components/schemas/Invoice" } },
+                    "total": { "type": "integer" },
+                    "page": { "type": "integer" },
+                    "per_page": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createInvoice",
+        "summary": "Create invoice",
+        "description": "Creates a new invoice in draft status.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/InvoiceCreate" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Invoice created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Invoice" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/invoices/{id}": {
+      "get": {
+        "operationId": "getInvoice",
+        "summary": "Get invoice",
+        "description": "Returns a single invoice by ID.",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Invoice details",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Invoice" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/invoices/{id}/send": {
+      "post": {
+        "operationId": "sendInvoice",
+        "summary": "Send invoice via email",
+        "description": "Sends the invoice to the customer's email address. Changes status from draft to sent.",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email_to": { "type": "string", "format": "email" },
+                  "message": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Invoice sent" }
+        }
+      }
+    },
+    "/accounts": {
+      "get": {
+        "operationId": "listAccounts",
+        "summary": "List chart of accounts",
+        "description": "Returns the company's chart of accounts.",
+        "parameters": [
+          { "name": "account_type", "in": "query", "schema": { "type": "string", "enum": ["asset", "liability", "equity", "revenue", "expense"] } },
+          { "name": "active", "in": "query", "schema": { "type": "boolean", "default": true } }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of accounts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": { "type": "array", "items": { "$ref": "#/components/schemas/Account" } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/accounts/{id}": {
+      "get": {
+        "operationId": "getAccount",
+        "summary": "Get account details",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Account details",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Account" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reports/profit-and-loss": {
+      "get": {
+        "operationId": "getProfitAndLoss",
+        "summary": "Profit & Loss report",
+        "description": "Returns a profit and loss statement for the specified date range.",
+        "parameters": [
+          { "name": "start_date", "in": "query", "required": true, "schema": { "type": "string", "format": "date" } },
+          { "name": "end_date", "in": "query", "required": true, "schema": { "type": "string", "format": "date" } },
+          { "name": "accounting_method", "in": "query", "schema": { "type": "string", "enum": ["accrual", "cash"], "default": "accrual" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "P&L report",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Report" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reports/balance-sheet": {
+      "get": {
+        "operationId": "getBalanceSheet",
+        "summary": "Balance Sheet report",
+        "description": "Returns a balance sheet as of the specified date.",
+        "parameters": [
+          { "name": "as_of", "in": "query", "required": true, "schema": { "type": "string", "format": "date" } },
+          { "name": "accounting_method", "in": "query", "schema": { "type": "string", "enum": ["accrual", "cash"], "default": "accrual" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Balance sheet",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Report" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/payments": {
+      "post": {
+        "operationId": "recordPayment",
+        "summary": "Record payment",
+        "description": "Records a payment received against one or more invoices.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PaymentCreate" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Payment recorded",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Payment" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/vendors": {
+      "get": {
+        "operationId": "listVendors",
+        "summary": "List vendors",
+        "description": "Returns a list of vendors.",
+        "parameters": [
+          { "name": "active", "in": "query", "schema": { "type": "boolean", "default": true } },
+          { "name": "search", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of vendors",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": { "type": "array", "items": { "$ref": "#/components/schemas/Vendor" } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/bills": {
+      "post": {
+        "operationId": "createBill",
+        "summary": "Create bill",
+        "description": "Creates a new bill (accounts payable) from a vendor.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/BillCreate" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Bill created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Bill" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/journal-entries": {
+      "post": {
+        "operationId": "createJournalEntry",
+        "summary": "Create journal entry",
+        "description": "Creates a manual journal entry for adjustments, close, or reconciliation. Debits must equal credits.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/JournalEntryCreate" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Journal entry created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/JournalEntry" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Money": {
+        "type": "object",
+        "properties": {
+          "amount": { "type": "number", "format": "double", "example": 1500.00 },
+          "currency": { "type": "string", "example": "USD", "default": "USD" }
+        },
+        "required": ["amount"]
+      },
+      "LineItem": {
+        "type": "object",
+        "properties": {
+          "description": { "type": "string", "example": "Consulting services — January 2026" },
+          "quantity": { "type": "number", "example": 10 },
+          "unit_price": { "$ref": "#/components/schemas/Money" },
+          "amount": { "$ref": "#/components/schemas/Money" },
+          "account_id": { "type": "string", "example": "acct_4000" },
+          "tax_code": { "type": "string", "example": "TAX" }
+        },
+        "required": ["description", "amount"]
+      },
+      "Invoice": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "example": "inv_1001" },
+          "customer_id": { "type": "string", "example": "cust_42" },
+          "customer_name": { "type": "string", "example": "Acme Corp" },
+          "status": { "type": "string", "enum": ["draft", "sent", "paid", "overdue", "voided"] },
+          "invoice_number": { "type": "string", "example": "INV-2026-0042" },
+          "date": { "type": "string", "format": "date" },
+          "due_date": { "type": "string", "format": "date" },
+          "line_items": { "type": "array", "items": { "$ref": "#/components/schemas/LineItem" } },
+          "subtotal": { "$ref": "#/components/schemas/Money" },
+          "tax": { "$ref": "#/components/schemas/Money" },
+          "total": { "$ref": "#/components/schemas/Money" },
+          "balance_due": { "$ref": "#/components/schemas/Money" },
+          "memo": { "type": "string" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "InvoiceCreate": {
+        "type": "object",
+        "properties": {
+          "customer_id": { "type": "string" },
+          "date": { "type": "string", "format": "date" },
+          "due_date": { "type": "string", "format": "date" },
+          "line_items": { "type": "array", "items": { "$ref": "#/components/schemas/LineItem" } },
+          "memo": { "type": "string" }
+        },
+        "required": ["customer_id", "line_items"]
+      },
+      "Account": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "example": "acct_1000" },
+          "name": { "type": "string", "example": "Accounts Receivable" },
+          "account_type": { "type": "string", "enum": ["asset", "liability", "equity", "revenue", "expense"] },
+          "account_sub_type": { "type": "string", "example": "AccountsReceivable" },
+          "account_number": { "type": "string", "example": "1100" },
+          "balance": { "$ref": "#/components/schemas/Money" },
+          "active": { "type": "boolean" },
+          "description": { "type": "string" }
+        }
+      },
+      "Report": {
+        "type": "object",
+        "properties": {
+          "report_name": { "type": "string" },
+          "start_date": { "type": "string", "format": "date" },
+          "end_date": { "type": "string", "format": "date" },
+          "currency": { "type": "string", "default": "USD" },
+          "rows": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "label": { "type": "string" },
+                "value": { "$ref": "#/components/schemas/Money" },
+                "children": { "type": "array", "items": { "type": "object" } }
+              }
+            }
+          },
+          "net_income": { "$ref": "#/components/schemas/Money" }
+        }
+      },
+      "PaymentCreate": {
+        "type": "object",
+        "properties": {
+          "customer_id": { "type": "string" },
+          "amount": { "$ref": "#/components/schemas/Money" },
+          "date": { "type": "string", "format": "date" },
+          "payment_method": { "type": "string", "enum": ["cash", "check", "credit_card", "bank_transfer", "other"] },
+          "reference_number": { "type": "string" },
+          "invoice_ids": { "type": "array", "items": { "type": "string" } },
+          "memo": { "type": "string" }
+        },
+        "required": ["customer_id", "amount", "invoice_ids"]
+      },
+      "Payment": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "customer_id": { "type": "string" },
+          "amount": { "$ref": "#/components/schemas/Money" },
+          "date": { "type": "string", "format": "date" },
+          "payment_method": { "type": "string" },
+          "reference_number": { "type": "string" },
+          "invoice_ids": { "type": "array", "items": { "type": "string" } },
+          "memo": { "type": "string" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Vendor": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "display_name": { "type": "string", "example": "Office Supplies Inc." },
+          "company_name": { "type": "string" },
+          "email": { "type": "string", "format": "email" },
+          "phone": { "type": "string" },
+          "balance": { "$ref": "#/components/schemas/Money" },
+          "active": { "type": "boolean" }
+        }
+      },
+      "BillCreate": {
+        "type": "object",
+        "properties": {
+          "vendor_id": { "type": "string" },
+          "date": { "type": "string", "format": "date" },
+          "due_date": { "type": "string", "format": "date" },
+          "line_items": { "type": "array", "items": { "$ref": "#/components/schemas/LineItem" } },
+          "memo": { "type": "string" }
+        },
+        "required": ["vendor_id", "line_items"]
+      },
+      "Bill": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "vendor_id": { "type": "string" },
+          "status": { "type": "string", "enum": ["open", "paid", "overdue"] },
+          "date": { "type": "string", "format": "date" },
+          "due_date": { "type": "string", "format": "date" },
+          "line_items": { "type": "array", "items": { "$ref": "#/components/schemas/LineItem" } },
+          "total": { "$ref": "#/components/schemas/Money" },
+          "balance_due": { "$ref": "#/components/schemas/Money" },
+          "memo": { "type": "string" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "JournalEntryLine": {
+        "type": "object",
+        "properties": {
+          "account_id": { "type": "string" },
+          "description": { "type": "string" },
+          "debit": { "$ref": "#/components/schemas/Money" },
+          "credit": { "$ref": "#/components/schemas/Money" }
+        },
+        "required": ["account_id"]
+      },
+      "JournalEntryCreate": {
+        "type": "object",
+        "properties": {
+          "date": { "type": "string", "format": "date" },
+          "lines": { "type": "array", "items": { "$ref": "#/components/schemas/JournalEntryLine" } },
+          "memo": { "type": "string", "example": "Month-end close adjustment" },
+          "reference_number": { "type": "string" }
+        },
+        "required": ["date", "lines"]
+      },
+      "JournalEntry": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "date": { "type": "string", "format": "date" },
+          "lines": { "type": "array", "items": { "$ref": "#/components/schemas/JournalEntryLine" } },
+          "total_debit": { "$ref": "#/components/schemas/Money" },
+          "total_credit": { "$ref": "#/components/schemas/Money" },
+          "memo": { "type": "string" },
+          "reference_number": { "type": "string" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "security": [
+    { "BearerAuth": [] }
+  ]
+}

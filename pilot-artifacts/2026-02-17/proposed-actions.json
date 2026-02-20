@@ -1,0 +1,6 @@
+{
+  "actions": [
+    {"id": "act-1", "type": "journal-adjustment", "risk": "low", "status": "proposed"},
+    {"id": "act-2", "type": "supporting-doc-request", "risk": "medium", "status": "proposed"}
+  ]
+}

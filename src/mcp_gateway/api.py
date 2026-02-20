@@ -20,6 +20,11 @@ from .transports import validate_transport_endpoint
 
 router = APIRouter(prefix="/gateway", tags=["gateway"])
 
+# Code Mode sub-router (mounted after this module's routes are defined)
+def mount_codemode_router(app_router: APIRouter) -> None:
+    from .api_codemode import router as codemode_router
+    app_router.include_router(codemode_router)
+
 _DB_PATH = os.getenv(
     "MCP_GATEWAY_DB_PATH",
     str((Path(__file__).resolve().parents[2] / "data" / "gateway_control_plane.db")),

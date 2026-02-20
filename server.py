@@ -10,6 +10,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from prometheus_client import Counter, Histogram, Gauge, Summary, generate_latest, CONTENT_TYPE_LATEST
 from pydantic import BaseModel, Field
+
+from src.mcp_gateway.api import router as gateway_router
+from src.mcp_gateway.api import mount_codemode_router
 import structlog
 from structlog.contextvars import bind_contextvars, clear_contextvars
 
@@ -187,6 +190,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount gateway API and Code Mode sub-router
+mount_codemode_router(gateway_router)
+app.include_router(gateway_router)
 
 # Middleware for request metrics and logging
 @app.middleware("http")

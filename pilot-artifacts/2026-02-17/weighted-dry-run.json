@@ -1,0 +1,1 @@
+{"allowed":true,"decision":"allow","reason":"allow by rule 'allow-tenant-a-plan'","matched_rule":"allow-tenant-a-plan","selected_server_id":"tenant-a-acct-primary","server_healthy":true,"strategy":"weighted"}
