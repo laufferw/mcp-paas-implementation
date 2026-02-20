@@ -3,7 +3,7 @@ from enum import Enum
 from typing import Dict, List, Optional
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, Field, EmailStr, validator, root_validator
+from pydantic import BaseModel, Field, EmailStr, field_validator, model_validator
 
 from .base import BaseSchema, ResourceQuota, PaginatedResponse
 

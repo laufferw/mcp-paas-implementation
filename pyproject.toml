@@ -23,7 +23,8 @@ requires-python = ">=3.8"
 dependencies = [
     "fastapi>=0.68.0,<0.69.0",
     "uvicorn>=0.15.0,<0.16.0",
-    "pydantic>=1.8.0,<2.0.0",
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
     "python-jose[cryptography]>=3.3.0,<4.0.0",
     "passlib[bcrypt]>=1.7.4,<2.0.0",
     "prometheus-client>=0.14.1,<0.15.0",

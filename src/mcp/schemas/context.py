@@ -3,7 +3,7 @@ from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, Field, validator, root_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from .base import BaseSchema, PaginatedResponse
 
@@ -167,5 +167,7 @@ class ContextUpdate(BaseSchema):
                 "description": "Updated context for premium support",
                 "parameters": {
                     "temperature": 0.5,
-                    
+                }
+            }
+        }
 

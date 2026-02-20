@@ -2,7 +2,7 @@ from enum import Enum
 from typing import Dict, Any, Optional
 from uuid import UUID, uuid4
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ContextStatus(str, Enum):
@@ -32,6 +32,5 @@ class ModelContext(BaseModel):
     updated_at: datetime = Field(default_factory=datetime.utcnow, description="When the context was last updated")
     expires_at: Optional[datetime] = Field(default=None, description="When the context will expire")
     
-    class Config:
-        use_enum_values = True
+    model_config = ConfigDict(use_enum_values=True)
 

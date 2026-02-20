@@ -1622,7 +1622,7 @@ from pathlib import Path
 
 import aiofiles
 import psutil
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 from mcp_paas.models.registry import ModelRegistry
 from mcp_paas.config import settings
@@ -1643,8 +1643,9 @@ class ModelVersion(BaseModel):
     path: Path
     metadata: Dict[str, Any] = Field(default_factory=dict)
     
-    @validator('path')
-    def validate_path(cls, v):
+    @field_validator('path')
+    @classmethod
+    def validate_path(cls, v: Any) -> Path:
         return Path(v) if not isinstance(v, Path) else v
 
 class ModelInfo(BaseModel):

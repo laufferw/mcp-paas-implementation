@@ -10,7 +10,7 @@ from mcp.services.auth import get_current_user, get_current_active_tenant
 from mcp.services.context_manager import ContextManager
 from mcp.models.models import User, Tenant
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 # Pydantic models for request/response
@@ -44,8 +44,7 @@ class ContextResponse(ContextBase):
     ttl_seconds: Optional[int] = Field(default=None, description="Time to live in seconds, if set")
     state: str = Field(..., description="Current state of the context")
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class InferenceRequest(BaseModel):

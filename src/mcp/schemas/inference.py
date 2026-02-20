@@ -1,6 +1,6 @@
 from typing import Dict, List, Optional, Union, Any
 from enum import Enum
-from pydantic import BaseModel, Field, validator, root_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 import time
 from datetime import datetime
 
@@ -8,11 +8,7 @@ from datetime import datetime
 class BaseSchema(BaseModel):
     """Base schema for all models."""
     
-    class Config:
-        extra = "forbid"
-        json_encoders = {
-            datetime: lambda v: v.isoformat()
-        }
+    model_config = ConfigDict(extra="forbid")
 
 # Enums for inference parameters
 class FinishReason(str, Enum):
@@ -62,22 +58,23 @@ class ModelParameters(BaseSchema):
         description="Sequences where the model stops generating. Can be a string or array of strings."
     )
     
-    @validator('temperature', 'top_p', 'presence_penalty', 'frequency_penalty', pre=True)
-    def check_float_precision(cls, v):
+    @field_validator('temperature', 'top_p', 'presence_penalty', 'frequency_penalty', mode='before')
+    @classmethod
+    def check_float_precision(cls, v: Any) -> Any:
         """Ensure float values are properly formatted."""
         if isinstance(v, float):
             return round(v, 6)
         return v
     
-    @root_validator
-    def check_parameters_compatibility(cls, values):
+    @model_validator(mode='after')
+    def check_parameters_compatibility(self) -> 'ModelParameters':
         """Validate that parameters are compatible with each other."""
-        if values.get('temperature', 0) > 1.0 and values.get('top_p', 0) < 1.0:
+        if (self.temperature or 0) > 1.0 and (self.top_p or 0) < 1.0:
             raise ValueError("High temperature with low top_p can lead to suboptimal results")
-        return values
+        return self
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "temperature": 0.7,
                 "top_p": 0.95,
@@ -107,7 +104,7 @@ class StreamingOptions(BaseSchema):
     )
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "enabled": True,
                 "chunk_size": 20,
@@ -131,7 +128,7 @@ class FunctionDefinition(BaseSchema):
     )
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "name": "get_weather",
                 "description": "Get the current weather in a given location",
@@ -176,7 +173,7 @@ class InferenceRequest(BaseSchema):
     )
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "prompt": "Write a short story about a robot learning to paint.",
                 "context_id": "ctx_67890abcdef",
@@ -207,7 +204,7 @@ class TokenUsage(BaseSchema):
     )
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "prompt_tokens": 42,
                 "completion_tokens": 128,
@@ -235,7 +232,7 @@ class PerformanceMetrics(BaseSchema):
     )
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "latency_ms": 1250.45,
                 "tokens_per_second": 22.5,
@@ -256,7 +253,7 @@ class FunctionCall(BaseSchema):
     )
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "name": "get_weather",
                 "arguments": {
@@ -281,7 +278,7 @@ class ErrorDetails(BaseSchema):
     )
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "code": "model_overloaded",
                 "message": "The model is currently overloaded with requests. Please try again later.",
@@ -319,15 +316,16 @@ class InferenceResponse(BaseSchema):
         description="Error details, if inference failed."
     )
     
-    @validator('text')
-    def trim_whitespace(cls, v):
+    @field_validator('text')
+    @classmethod
+    def trim_whitespace(cls, v: str) -> str:
         """Trim leading and trailing whitespace."""
         if isinstance(v, str):
             return v.strip()
         return v
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "id": "inf_12345abcdef",
                 "text": "Once upon a time, there was a robot named Pixel who discovered an old set of paints...",
@@ -379,7 +377,7 @@ class StreamingChunk(BaseSchema):
     )
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "id": "inf_12345abcdef",
                 "chunk_index": 3,
@@ -406,7 +404,7 @@ class StreamingFinalChunk(StreamingChunk):
     )
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "id": "inf_12345abcdef",
                 "chunk_index": 10,

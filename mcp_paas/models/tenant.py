@@ -1,7 +1,7 @@
 from enum import Enum
 from datetime import datetime
 from typing import Dict, List, Optional, Union
-from pydantic import BaseModel, EmailStr, Field, validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 import uuid
 
 
@@ -46,8 +46,9 @@ class ResourceLimits(BaseModel):
         description="Custom limit parameters specific to the tenant"
     )
 
-    @validator('max_concurrent_requests', 'max_contexts', 'max_tokens_per_minute', 'max_storage_mb', 'max_compute_units')
-    def validate_positive_values(cls, v):
+    @field_validator('max_concurrent_requests', 'max_contexts', 'max_tokens_per_minute', 'max_storage_mb', 'max_compute_units')
+    @classmethod
+    def validate_positive_values(cls, v: int) -> int:
         if v < 0:
             raise ValueError("Resource limits must be positive values")
         return v
@@ -163,8 +164,9 @@ class Tenant(BaseModel):
         description="Additional metadata for the tenant"
     )
 
-    @validator('api_keys')
-    def validate_api_keys(cls, v):
+    @field_validator('api_keys')
+    @classmethod
+    def validate_api_keys(cls, v: list) -> list:
         """Ensure API keys are unique."""
         if len(v) != len(set(v)):
             raise ValueError("API keys must be unique")

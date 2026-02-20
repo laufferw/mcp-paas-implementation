@@ -2,20 +2,16 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, Field, validator, root_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class BaseSchema(BaseModel):
     """Base schema with common fields and functionality."""
     
-    class Config:
-        """Pydantic configuration for BaseSchema."""
-        orm_mode = True
-        arbitrary_types_allowed = True
-        json_encoders = {
-            datetime: lambda dt: dt.isoformat(),
-            UUID: lambda uuid: str(uuid)
-        }
+    model_config = ConfigDict(
+        from_attributes=True,
+        arbitrary_types_allowed=True,
+    )
 
 
 class ResponseStatus(BaseSchema):
@@ -88,11 +84,13 @@ class PaginatedResponse(BaseSchema):
         description="Total number of pages"
     )
     
-    @validator('pages')
-    def validate_pages(cls, v, values):
+    @field_validator('pages')
+    @classmethod
+    def validate_pages(cls, v: int, info: Any) -> int:
         """Validate pages calculation."""
-        if 'total' in values and 'per_page' in values and values['per_page'] > 0:
-            expected = (values['total'] + values['per_page'] - 1) // values['per_page']
+        data = info.data
+        if 'total' in data and 'per_page' in data and data['per_page'] > 0:
+            expected = (data['total'] + data['per_page'] - 1) // data['per_page']
             if v != expected:
                 raise ValueError(f"Pages calculation incorrect: expected {expected}")
         return v
@@ -124,11 +122,13 @@ class ResourceQuota(BaseSchema):
         description="Current amount of resource used"
     )
     
-    @validator('used')
-    def validate_used(cls, v, values):
+    @field_validator('used')
+    @classmethod
+    def validate_used(cls, v: int, info: Any) -> int:
         """Validate that used does not exceed limit."""
-        if 'limit' in values and v > values['limit']:
-            raise ValueError(f"Used amount ({v}) exceeds limit ({values['limit']})")
+        data = info.data
+        if 'limit' in data and v > data['limit']:
+            raise ValueError(f"Used amount ({v}) exceeds limit ({data['limit']})")
         return v
     
     class Config:
