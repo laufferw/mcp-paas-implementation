@@ -73,6 +73,26 @@ class GatewayStorage:
             self._ensure_column(conn, "gateway_access_tokens", "expires_at", "expires_at TEXT")
             self._ensure_column(conn, "gateway_access_tokens", "revoked_at", "revoked_at TEXT")
             self._ensure_column(conn, "gateway_access_tokens", "updated_at", "updated_at TEXT")
+
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS gateway_audit_log (
+                    event_id TEXT PRIMARY KEY,
+                    decided_at TEXT NOT NULL,
+                    subject_id TEXT NOT NULL,
+                    role TEXT NOT NULL,
+                    tenant_id TEXT,
+                    action TEXT NOT NULL,
+                    decision TEXT NOT NULL,
+                    reason TEXT,
+                    matched_rule TEXT,
+                    selected_server_id TEXT,
+                    server_healthy INTEGER,
+                    strategy TEXT,
+                    payload_json TEXT NOT NULL
+                )
+                """
+            )
             conn.commit()
 
     def execute(self, query: str, params: Iterable[Any] = ()) -> None:

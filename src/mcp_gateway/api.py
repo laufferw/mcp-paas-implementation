@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 from datetime import datetime, timezone
 from pathlib import Path
@@ -61,6 +62,10 @@ def _require_actor(x_gateway_token: str | None = Header(default=None)) -> Access
         raise HTTPException(status_code=401, detail="Invalid gateway token")
     if not actor.enabled:
         raise HTTPException(status_code=403, detail="Gateway token disabled")
+    if actor.expires_at:
+        expires = datetime.fromisoformat(actor.expires_at.replace("Z", "+00:00"))
+        if datetime.now(timezone.utc) >= expires:
+            raise HTTPException(status_code=401, detail="Token expired")
     return actor
 
 
@@ -296,6 +301,33 @@ def _dry_run_audit_fields(actor: AccessToken, tenant_id: str, action: str) -> di
     }
 
 
+def _store_audit_entry(result: dict) -> None:
+    storage.execute(
+        """
+        INSERT INTO gateway_audit_log (
+            event_id, decided_at, subject_id, role, tenant_id,
+            action, decision, reason, matched_rule,
+            selected_server_id, server_healthy, strategy, payload_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            result["event_id"],
+            result["decided_at"],
+            result["actor"]["subject_id"],
+            result["actor"]["role"],
+            result["request"]["tenant_id"],
+            result["request"]["action"],
+            result["decision"],
+            result.get("reason"),
+            result.get("matched_rule"),
+            result.get("selected_server_id"),
+            1 if result.get("server_healthy") else 0 if result.get("server_healthy") is not None else None,
+            result.get("strategy"),
+            json.dumps(result),
+        ),
+    )
+
+
 @router.post("/routes/dry-run")
 async def route_dry_run(payload: RouteDryRunRequest, x_gateway_token: str | None = Header(default=None)) -> dict:
     actor = _require_actor(x_gateway_token)
@@ -306,7 +338,7 @@ async def route_dry_run(payload: RouteDryRunRequest, x_gateway_token: str | None
 
     if payload.server_id and target_server is None:
         metrics.observe_dry_run("deny")
-        return {
+        result = {
             **audit,
             "allowed": False,
             "decision": PolicyDecision.DENY.value,
@@ -316,10 +348,12 @@ async def route_dry_run(payload: RouteDryRunRequest, x_gateway_token: str | None
             "server_healthy": None,
             "strategy": payload.strategy,
         }
+        _store_audit_entry(result)
+        return result
 
     if target_server and not target_server.healthy:
         metrics.observe_dry_run("deny")
-        return {
+        result = {
             **audit,
             "allowed": False,
             "decision": PolicyDecision.DENY.value,
@@ -329,6 +363,8 @@ async def route_dry_run(payload: RouteDryRunRequest, x_gateway_token: str | None
             "server_healthy": False,
             "strategy": payload.strategy,
         }
+        _store_audit_entry(result)
+        return result
 
     selected = target_server or registry.pick_server(
         tenant_id=payload.tenant_id,
@@ -339,7 +375,7 @@ async def route_dry_run(payload: RouteDryRunRequest, x_gateway_token: str | None
 
     if selected is None:
         metrics.observe_dry_run("deny")
-        return {
+        result = {
             **audit,
             "allowed": False,
             "decision": PolicyDecision.DENY.value,
@@ -349,6 +385,8 @@ async def route_dry_run(payload: RouteDryRunRequest, x_gateway_token: str | None
             "server_healthy": None,
             "strategy": payload.strategy,
         }
+        _store_audit_entry(result)
+        return result
 
     request = PolicyRequest(
         action=payload.action,
@@ -358,7 +396,7 @@ async def route_dry_run(payload: RouteDryRunRequest, x_gateway_token: str | None
     evaluation: PolicyEvaluation = policy.evaluate(request)
     metrics.observe_dry_run(evaluation.decision.value)
 
-    return {
+    result = {
         **audit,
         "allowed": evaluation.decision == PolicyDecision.ALLOW,
         "decision": evaluation.decision.value,
@@ -368,3 +406,28 @@ async def route_dry_run(payload: RouteDryRunRequest, x_gateway_token: str | None
         "server_healthy": selected.healthy,
         "strategy": payload.strategy,
     }
+    _store_audit_entry(result)
+    return result
+
+
+@router.get("/audit")
+async def export_audit_log(
+    tenant_id: str | None = None,
+    limit: int = Query(default=100, ge=1, le=1000),
+    x_gateway_token: str | None = Header(default=None),
+) -> dict:
+    actor = _require_actor(x_gateway_token)
+    require_scope(actor, "gateway:read", tenant_id=tenant_id)
+
+    if tenant_id:
+        rows = storage.query_all(
+            "SELECT payload_json FROM gateway_audit_log WHERE tenant_id = ? ORDER BY decided_at DESC LIMIT ?",
+            (tenant_id, limit),
+        )
+    else:
+        rows = storage.query_all(
+            "SELECT payload_json FROM gateway_audit_log ORDER BY decided_at DESC LIMIT ?",
+            (limit,),
+        )
+
+    return {"items": [json.loads(r["payload_json"]) for r in rows]}

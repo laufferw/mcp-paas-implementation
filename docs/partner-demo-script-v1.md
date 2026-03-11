@@ -18,10 +18,13 @@ Show, in 15 minutes, that AgentGate delivers **API-first, AI-first, agent-first*
 - Audit artifact output
 
 ### 3) Run onboarding + route demo (6 min)
-- Run pilot onboarding script
-- Show failover dry-run (allow)
-- Show weighted dry-run (allow)
-- Show denied-path dry-run (deny)
+- Run `pilot-artifacts/finance-stub-demo/run_demo.py` for an end-to-end walkthrough
+  - Creates admin + tenant tokens
+  - Registers a finance reconciliation MCP server
+  - Runs allow-path dry-run (plan action, matching rule)
+  - Runs deny-path dry-run (execute action, no matching rule)
+  - Exports the audit log
+- Alternatively, run the pilot onboarding script for failover/weighted demos
 
 ### 4) Show trust evidence (3 min)
 - Open latest artifact bundle in `pilot-artifacts/YYYY-MM-DD/`
@@ -34,6 +37,12 @@ Show, in 15 minutes, that AgentGate delivers **API-first, AI-first, agent-first*
 - Faster close prep
 - safer AI agent operations
 - auditable output for finance leadership
+
+## Demo artifacts
+
+- `pilot-artifacts/finance-stub-demo/fixtures.json` — deterministic fixture (3 accounts, 1 discrepancy)
+- `pilot-artifacts/finance-stub-demo/run_demo.py` — self-contained demo script (boots server, full lifecycle)
+- `docs/auth-lifecycle.md` — token bootstrap, rotation, and revocation reference
 
 ## Key language to repeat
 - API-first

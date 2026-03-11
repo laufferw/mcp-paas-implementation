@@ -1,0 +1,49 @@
+{
+  "scenario": "Month-end reconciliation — 3 accounts, 1 discrepancy",
+  "accounts": [
+    {
+      "account_id": "acct-1001",
+      "name": "Operating Cash",
+      "ledger_balance": 125000.00,
+      "bank_balance": 125000.00,
+      "status": "matched",
+      "discrepancy": 0.00
+    },
+    {
+      "account_id": "acct-1002",
+      "name": "Accounts Receivable",
+      "ledger_balance": 48750.00,
+      "bank_balance": 48750.00,
+      "status": "matched",
+      "discrepancy": 0.00
+    },
+    {
+      "account_id": "acct-1003",
+      "name": "Vendor Payables",
+      "ledger_balance": 31200.00,
+      "bank_balance": 31875.00,
+      "status": "discrepancy",
+      "discrepancy": -675.00,
+      "discrepancy_note": "Unrecorded bank fee — pending journal adjustment"
+    }
+  ],
+  "expected_actions": [
+    {
+      "action": "reconcile",
+      "account_id": "acct-1001",
+      "result": "no_action_needed"
+    },
+    {
+      "action": "reconcile",
+      "account_id": "acct-1002",
+      "result": "no_action_needed"
+    },
+    {
+      "action": "journal_adjustment",
+      "account_id": "acct-1003",
+      "amount": -675.00,
+      "description": "Record unrecorded bank fee",
+      "requires_approval": true
+    }
+  ]
+}

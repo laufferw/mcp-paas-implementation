@@ -139,7 +139,7 @@ def test_malformed_payload_returns_422(tmp_path) -> None:
     assert response.status_code == 422
 
 
-def test_expired_token_returns_403(tmp_path) -> None:
+def test_expired_token_returns_401(tmp_path) -> None:
     client = _build_client(tmp_path)
 
     expired_at = (datetime.now(timezone.utc) - timedelta(minutes=1)).isoformat()
@@ -158,7 +158,7 @@ def test_expired_token_returns_403(tmp_path) -> None:
     assert token_resp.status_code == 200
 
     response = client.get("/gateway/servers", headers={"x-gateway-token": "expired-token"})
-    assert response.status_code == 403
+    assert response.status_code == 401
     assert response.json()["detail"] == "Token expired"
 
 
@@ -176,3 +176,139 @@ def test_revoked_token_returns_403(tmp_path) -> None:
     response = client.get("/gateway/servers", headers={"x-gateway-token": "revocable-token"})
     assert response.status_code == 403
     assert response.json()["detail"] in ("Gateway token disabled", "Token disabled", "Token revoked")
+
+
+# ---------- Negative test cases (Workstream A) ----------
+
+
+def test_missing_auth_header_returns_401(tmp_path) -> None:
+    client = _build_client(tmp_path)
+    response = client.get("/gateway/servers")
+    assert response.status_code == 401
+    assert response.json()["detail"] == "x-gateway-token required"
+
+
+def test_invalid_token_returns_401(tmp_path) -> None:
+    client = _build_client(tmp_path)
+    response = client.get("/gateway/servers", headers={"x-gateway-token": "bogus-token-xyz"})
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Invalid gateway token"
+
+
+def test_reader_cannot_write_server(tmp_path) -> None:
+    client = _build_client(tmp_path)
+    client.post(
+        "/gateway/access/tokens",
+        json={
+            "token": "reader-token",
+            "subject_id": "reader-1",
+            "tenant_id": "tenant-a",
+            "role": "reader",
+            "scopes": ["gateway:read"],
+        },
+        headers={"x-gateway-token": "test-admin"},
+    )
+    resp = client.post(
+        "/gateway/servers",
+        json={
+            "server_id": "srv-x",
+            "name": "test",
+            "tenant_id": "tenant-a",
+            "transport": "sse",
+            "endpoint": "https://example.com/sse",
+        },
+        headers={"x-gateway-token": "reader-token"},
+    )
+    assert resp.status_code == 403
+    assert "Missing scope" in resp.json()["detail"]
+
+
+def test_register_server_missing_required_fields(tmp_path) -> None:
+    client = _build_client(tmp_path)
+    _create_tenant_operator(client)
+
+    resp = client.post(
+        "/gateway/servers",
+        json={"server_id": "srv-incomplete"},
+        headers={"x-gateway-token": "tenant-a-token"},
+    )
+    assert resp.status_code == 422
+
+
+def test_dry_run_unknown_server_id(tmp_path) -> None:
+    client = _build_client(tmp_path)
+    _create_tenant_operator(client)
+
+    resp = client.post(
+        "/gateway/routes/dry-run",
+        json={"tenant_id": "tenant-a", "action": "plan", "server_id": "nonexistent-srv"},
+        headers={"x-gateway-token": "tenant-a-token"},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["allowed"] is False
+    assert body["decision"] == "deny"
+    assert "not registered" in body["reason"]
+
+
+def test_disabled_token_returns_403(tmp_path) -> None:
+    client = _build_client(tmp_path)
+    client.post(
+        "/gateway/access/tokens",
+        json={
+            "token": "disabled-token",
+            "subject_id": "disabled-user",
+            "tenant_id": "tenant-a",
+            "role": "tenant-operator",
+            "scopes": ["gateway:read"],
+            "enabled": False,
+        },
+        headers={"x-gateway-token": "test-admin"},
+    )
+    resp = client.get("/gateway/servers", headers={"x-gateway-token": "disabled-token"})
+    assert resp.status_code == 403
+    assert "disabled" in resp.json()["detail"].lower()
+
+
+def test_audit_log_export(tmp_path) -> None:
+    client = _build_client(tmp_path)
+    _create_tenant_operator(client)
+
+    client.post(
+        "/gateway/servers",
+        json={
+            "server_id": "srv-audit",
+            "name": "audit-test",
+            "tenant_id": "tenant-a",
+            "transport": "sse",
+            "endpoint": "https://example.com/sse",
+        },
+        headers={"x-gateway-token": "tenant-a-token"},
+    )
+    client.post(
+        "/gateway/policy/rules",
+        json={
+            "name": "allow-audit-plan",
+            "effect": "allow",
+            "actions": ["plan"],
+            "resources": ["gateway.server.srv-audit"],
+            "tenants": ["tenant-a"],
+        },
+        headers={"x-gateway-token": "test-admin"},
+    )
+    client.post(
+        "/gateway/routes/dry-run",
+        json={"tenant_id": "tenant-a", "action": "plan", "server_id": "srv-audit"},
+        headers={"x-gateway-token": "tenant-a-token"},
+    )
+
+    resp = client.get(
+        "/gateway/audit",
+        params={"tenant_id": "tenant-a"},
+        headers={"x-gateway-token": "test-admin"},
+    )
+    assert resp.status_code == 200
+    items = resp.json()["items"]
+    assert len(items) >= 1
+    assert items[0]["event_id"]
+    assert items[0]["decision"] in ("allow", "deny")

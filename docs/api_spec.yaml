@@ -41,6 +41,7 @@ paths:
               $ref: '#/components/schemas/AccessTokenCreate'
             examples:
               tenantOperator:
+                summary: Create a tenant-operator token
                 value:
                   token: tenant-a-token
                   subject_id: tenant-a-op
@@ -48,6 +49,15 @@ paths:
                   role: tenant-operator
                   scopes: [gateway:read, gateway:write, gateway:plan]
                   enabled: true
+              admin:
+                summary: Create an admin token with expiry
+                value:
+                  token: ops-admin-token
+                  subject_id: ops-admin
+                  role: admin
+                  scopes: [gateway:*]
+                  enabled: true
+                  expires_at: "2026-12-31T23:59:59+00:00"
       responses:
         '200':
           description: Token created/updated
@@ -124,6 +134,7 @@ paths:
               $ref: '#/components/schemas/RegisterServerRequest'
             examples:
               sseServer:
+                summary: Register an SSE transport server
                 value:
                   server_id: srv-1
                   name: github-mcp
@@ -133,6 +144,15 @@ paths:
                   tags: [finance]
                   weight: 5
                   priority: 20
+              stdioServer:
+                summary: Register a stdio transport server
+                value:
+                  server_id: srv-local
+                  name: local-mcp
+                  tenant_id: tenant-a
+                  transport: stdio
+                  endpoint: ""
+                  tags: [dev]
       responses:
         '200':
           description: Registered
@@ -140,6 +160,16 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RegisteredServer'
+              example:
+                server_id: srv-1
+                name: github-mcp
+                tenant_id: tenant-a
+                transport: sse
+                endpoint: https://example.com/sse
+                tags: [finance]
+                healthy: true
+                weight: 5
+                priority: 20
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
@@ -180,7 +210,22 @@ paths:
             schema:
               $ref: '#/components/schemas/RouteDryRunRequest'
             examples:
+              allowPath:
+                summary: Dry-run that matches an allow rule
+                value:
+                  tenant_id: tenant-a
+                  action: plan
+                  server_id: srv-1
+                  strategy: preferred
+              denyPath:
+                summary: Dry-run with unknown server (denied)
+                value:
+                  tenant_id: tenant-a
+                  action: plan
+                  server_id: srv-nonexistent
+                  strategy: preferred
               weightedPlan:
+                summary: Weighted strategy selection
                 value:
                   tenant_id: tenant-a
                   action: plan
@@ -193,9 +238,101 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RouteDryRunResponse'
+              examples:
+                allowed:
+                  summary: Policy allows the request
+                  value:
+                    event_id: "550e8400-e29b-41d4-a716-446655440000"
+                    decided_at: "2026-03-11T12:00:00+00:00"
+                    actor:
+                      subject_id: tenant-a-op
+                      role: tenant-operator
+                      tenant_id: tenant-a
+                    request:
+                      tenant_id: tenant-a
+                      action: plan
+                    allowed: true
+                    decision: allow
+                    reason: "allow: matched rule allow-plan"
+                    matched_rule: allow-plan
+                    selected_server_id: srv-1
+                    server_healthy: true
+                    strategy: preferred
+                denied:
+                  summary: Policy denies — server not registered
+                  value:
+                    event_id: "550e8400-e29b-41d4-a716-446655440001"
+                    decided_at: "2026-03-11T12:00:01+00:00"
+                    actor:
+                      subject_id: tenant-a-op
+                      role: tenant-operator
+                      tenant_id: tenant-a
+                    request:
+                      tenant_id: tenant-a
+                      action: plan
+                    allowed: false
+                    decision: deny
+                    reason: "deny: target server not registered"
+                    matched_rule: null
+                    selected_server_id: null
+                    server_healthy: null
+                    strategy: preferred
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
+
+  /gateway/audit:
+    get:
+      tags: [Gateway]
+      summary: Export audit log of dry-run decisions
+      parameters:
+        - $ref: '#/components/parameters/XGatewayToken'
+        - in: query
+          name: tenant_id
+          required: false
+          schema:
+            type: string
+          description: Filter by tenant
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 100
+      responses:
+        '200':
+          description: Audit entries (most recent first)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RouteDryRunResponse'
+              example:
+                items:
+                  - event_id: "550e8400-e29b-41d4-a716-446655440000"
+                    decided_at: "2026-03-11T12:00:00+00:00"
+                    actor:
+                      subject_id: tenant-a-op
+                      role: tenant-operator
+                      tenant_id: tenant-a
+                    request:
+                      tenant_id: tenant-a
+                      action: plan
+                    allowed: true
+                    decision: allow
+                    reason: "allow: matched rule allow-plan"
+                    matched_rule: allow-plan
+                    selected_server_id: srv-1
+                    server_healthy: true
+                    strategy: preferred
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
 
 components:
   parameters:
