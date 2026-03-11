@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 from uuid import uuid4
 
 from fastapi import APIRouter, Header, HTTPException, Query
@@ -17,6 +18,7 @@ from .observability import GatewayMetrics
 from .policy import PolicyDecision, PolicyEngine, PolicyEvaluation, PolicyRequest, PolicyRule
 from .registry import GatewayRegistry, RegisteredServer
 from .storage import GatewayStorage
+from .transport_adapters import get_adapter
 from .transports import validate_transport_endpoint
 
 router = APIRouter(prefix="/gateway", tags=["gateway"])
@@ -94,6 +96,13 @@ class PolicyRuleCreate(BaseModel):
     actions: list[str]
     resources: list[str]
     tenants: list[str] | None = None
+
+
+class ExecuteRequest(BaseModel):
+    server_id: str
+    method: str
+    params: dict[str, Any] = Field(default_factory=dict)
+    dry_run: bool = False
 
 
 class AccessTokenCreate(BaseModel):
@@ -408,6 +417,164 @@ async def route_dry_run(payload: RouteDryRunRequest, x_gateway_token: str | None
     }
     _store_audit_entry(result)
     return result
+
+
+@router.post("/routes/execute")
+async def route_execute(
+    payload: ExecuteRequest,
+    x_gateway_token: str | None = Header(default=None),
+) -> dict:
+    actor = _require_actor(x_gateway_token)
+
+    # 1. Look up server from registry
+    server = registry.get(payload.server_id)
+    if server is None:
+        raise HTTPException(status_code=404, detail="Server not found")
+
+    require_scope(actor, "gateway:execute", tenant_id=server.tenant_id)
+
+    audit_id = str(uuid4())
+    start = time.monotonic()
+
+    # 2. Policy check
+    policy_request = PolicyRequest(
+        action=payload.method,
+        resource=f"gateway.server.{server.server_id}",
+        tenant_id=server.tenant_id,
+    )
+    evaluation: PolicyEvaluation = policy.evaluate(policy_request)
+    policy_decision = {
+        "decision": evaluation.decision.value,
+        "reason": evaluation.reason,
+        "matched_rule": evaluation.matched_rule,
+    }
+
+    if evaluation.decision != PolicyDecision.ALLOW:
+        duration_ms = int((time.monotonic() - start) * 1000)
+        result_payload: dict[str, Any] = {
+            "server_id": payload.server_id,
+            "method": payload.method,
+            "status": "denied",
+            "result": None,
+            "policy_decision": policy_decision,
+            "audit_id": audit_id,
+            "duration_ms": duration_ms,
+        }
+        _store_execute_audit(audit_id, actor, server, payload, "denied", evaluation, None, duration_ms)
+        return result_payload
+
+    # 3. If dry_run, skip actual call
+    if payload.dry_run:
+        duration_ms = int((time.monotonic() - start) * 1000)
+        result_payload = {
+            "server_id": payload.server_id,
+            "method": payload.method,
+            "status": "allowed",
+            "result": None,
+            "policy_decision": policy_decision,
+            "audit_id": audit_id,
+            "duration_ms": duration_ms,
+            "dry_run": True,
+        }
+        _store_execute_audit(audit_id, actor, server, payload, "allowed", evaluation, None, duration_ms)
+        return result_payload
+
+    # 4. Execute via transport adapter
+    try:
+        adapter = get_adapter(server.transport)
+    except ValueError:
+        duration_ms = int((time.monotonic() - start) * 1000)
+        result_payload = {
+            "server_id": payload.server_id,
+            "method": payload.method,
+            "status": "error",
+            "result": None,
+            "error": f"No adapter for transport: {server.transport}",
+            "policy_decision": policy_decision,
+            "audit_id": audit_id,
+            "duration_ms": duration_ms,
+        }
+        _store_execute_audit(audit_id, actor, server, payload, "error", evaluation, None, duration_ms)
+        return result_payload
+
+    transport_result = await adapter.call(
+        endpoint=server.endpoint,
+        method=payload.method,
+        params=payload.params,
+        timeout=30,
+    )
+    duration_ms = int((time.monotonic() - start) * 1000)
+
+    if transport_result["error"] is not None:
+        status = "error"
+    else:
+        status = "allowed"
+
+    result_payload = {
+        "server_id": payload.server_id,
+        "method": payload.method,
+        "status": status,
+        "result": transport_result["result"],
+        "policy_decision": policy_decision,
+        "audit_id": audit_id,
+        "duration_ms": duration_ms,
+    }
+    if transport_result["error"] is not None:
+        result_payload["error"] = transport_result["error"]
+
+    _store_execute_audit(audit_id, actor, server, payload, status, evaluation, transport_result, duration_ms)
+    return result_payload
+
+
+def _store_execute_audit(
+    audit_id: str,
+    actor: AccessToken,
+    server: Any,
+    payload: ExecuteRequest,
+    status: str,
+    evaluation: PolicyEvaluation,
+    transport_result: dict | None,
+    duration_ms: int,
+) -> None:
+    now = datetime.now(timezone.utc).isoformat()
+    full_payload = {
+        "event_id": audit_id,
+        "decided_at": now,
+        "actor": {"subject_id": actor.subject_id, "role": actor.role, "tenant_id": actor.tenant_id},
+        "request": {"tenant_id": server.tenant_id, "action": payload.method},
+        "decision": evaluation.decision.value,
+        "reason": evaluation.reason,
+        "matched_rule": evaluation.matched_rule,
+        "selected_server_id": server.server_id,
+        "server_healthy": server.healthy,
+        "strategy": "execute",
+        "status": status,
+        "duration_ms": duration_ms,
+    }
+    storage.execute(
+        """
+        INSERT INTO gateway_audit_log (
+            event_id, decided_at, subject_id, role, tenant_id,
+            action, decision, reason, matched_rule,
+            selected_server_id, server_healthy, strategy, payload_json
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            audit_id,
+            now,
+            actor.subject_id,
+            actor.role,
+            server.tenant_id,
+            payload.method,
+            evaluation.decision.value,
+            evaluation.reason,
+            evaluation.matched_rule,
+            server.server_id,
+            1 if server.healthy else 0,
+            "execute",
+            json.dumps(full_payload),
+        ),
+    )
 
 
 @router.get("/audit")

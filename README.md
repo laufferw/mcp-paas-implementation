@@ -26,11 +26,18 @@ See:
 - Dry-run route evaluation with explicit deny reasons and health filtering
 - Prometheus metrics export endpoint
 
-### Phase 2 (current)
+### Phase 2
 - Transport-specific endpoint validation (`stdio`, `sse`, `streamable-http`, `ws`)
 - Weighted/failover route selection for dry-run planning
 - Tenant-scoped RBAC token model and scope checks
 - CI workflow for gateway tests
+
+### Phase 3 (current)
+- Real transport execution adapters (streamable-http, SSE, stdio)
+- `POST /gateway/routes/execute` — calls real MCP servers through the gateway
+- Policy-gated execution with dry-run support
+- Echo MCP server test fixture for integration testing
+- Migration script for gateway schema verification
 
 ## Gateway endpoints
 
@@ -43,32 +50,82 @@ See:
 - `POST /gateway/policy/rules`
 - `DELETE /gateway/policy/rules/{name}`
 - `POST /gateway/access/tokens`
+- `POST /gateway/access/tokens/{token}/revoke`
 - `POST /gateway/routes/dry-run`
+- `POST /gateway/routes/execute` **(Phase 3)**
+- `GET /gateway/audit`
 
 > Protected endpoints require `x-gateway-token` with appropriate role/scope.
 
-## Quickstart
+## Quick Start
 
 ```bash
-# Clone
+# 1. Clone and install
 git clone <repository-url>
 cd mcp-paas-implementation
-
-# Install deps
 pip install -r requirements.txt
+
+# 2. Run migrations (creates/verifies SQLite schema)
+python scripts/migrate.py
+
+# 3. Start the server
+uvicorn server:app --reload
+
+# 4. The admin token is auto-bootstrapped (default: dev-gateway-token)
+# Override with: export MCP_GATEWAY_ADMIN_TOKEN="your-secret"
+
+# 5. Create a tenant operator token
+curl -X POST http://localhost:8000/gateway/access/tokens \
+  -H 'Content-Type: application/json' \
+  -H 'x-gateway-token: dev-gateway-token' \
+  -d '{
+    "token":"my-tenant-token",
+    "subject_id":"tenant-ops",
+    "tenant_id":"acme",
+    "role":"tenant-operator",
+    "scopes":["gateway:read","gateway:write","gateway:plan","gateway:execute"]
+  }'
+
+# 6. Register an MCP server
+curl -X POST http://localhost:8000/gateway/servers \
+  -H 'Content-Type: application/json' \
+  -H 'x-gateway-token: my-tenant-token' \
+  -d '{
+    "server_id":"my-mcp",
+    "name":"My MCP Server",
+    "tenant_id":"acme",
+    "transport":"streamable-http",
+    "endpoint":"http://localhost:9000/mcp"
+  }'
+
+# 7. Add a policy rule (admin only)
+curl -X POST http://localhost:8000/gateway/policy/rules \
+  -H 'Content-Type: application/json' \
+  -H 'x-gateway-token: dev-gateway-token' \
+  -d '{
+    "name":"allow-acme-tools",
+    "effect":"allow",
+    "actions":["tools/list","tools/call"],
+    "resources":["gateway.server.my-mcp"],
+    "tenants":["acme"]
+  }'
+
+# 8. Execute a call through the gateway
+curl -X POST http://localhost:8000/gateway/routes/execute \
+  -H 'Content-Type: application/json' \
+  -H 'x-gateway-token: my-tenant-token' \
+  -d '{
+    "server_id":"my-mcp",
+    "method":"tools/list",
+    "params":{}
+  }'
 ```
 
-Set optional env vars:
+## Environment variables
 
 ```bash
-export MCP_GATEWAY_DB_PATH="./data/gateway_control_plane.db"
-export MCP_GATEWAY_ADMIN_TOKEN="dev-gateway-token"
-```
-
-Run the API:
-
-```bash
-uvicorn mcp_paas.server:app --reload
+export MCP_GATEWAY_DB_PATH="./data/gateway_control_plane.db"  # SQLite path
+export MCP_GATEWAY_ADMIN_TOKEN="dev-gateway-token"             # Bootstrap admin token
 ```
 
 ## API contract examples
@@ -78,46 +135,17 @@ Canonical schema contract is defined in `docs/api_spec.yaml`.
 Error semantics to rely on:
 - `401` missing/invalid `x-gateway-token`
 - `403` role/scope/tenant violation (including expired/revoked tokens)
+- `404` unknown server_id in execute calls
 - `422` malformed payload or invalid enum/range
-
-## Phase 2 example flow
-
-```bash
-# 1) create a tenant operator token via bootstrap admin token
-curl -X POST http://localhost:8000/gateway/access/tokens \
-  -H 'Content-Type: application/json' \
-  -H 'x-gateway-token: dev-gateway-token' \
-  -d '{
-    "token":"tenant-a-token",
-    "subject_id":"tenant-a-op",
-    "tenant_id":"tenant-a",
-    "role":"tenant-operator",
-    "scopes":["gateway:read","gateway:write","gateway:plan"]
-  }'
-
-# 2) register servers
-curl -X POST http://localhost:8000/gateway/servers \
-  -H 'Content-Type: application/json' \
-  -H 'x-gateway-token: tenant-a-token' \
-  -d '{"server_id":"srv-1","name":"github-mcp","tenant_id":"tenant-a","transport":"sse","endpoint":"https://example.com/sse","weight":5,"priority":20}'
-
-# 3) add policy rule with admin token
-curl -X POST http://localhost:8000/gateway/policy/rules \
-  -H 'Content-Type: application/json' \
-  -H 'x-gateway-token: dev-gateway-token' \
-  -d '{"name":"allow-tenant-a-plan","effect":"allow","actions":["plan"],"resources":["gateway.server.srv-1"],"tenants":["tenant-a"]}'
-
-# 4) dry-run plan
-curl -X POST http://localhost:8000/gateway/routes/dry-run \
-  -H 'Content-Type: application/json' \
-  -H 'x-gateway-token: tenant-a-token' \
-  -d '{"tenant_id":"tenant-a","action":"plan","strategy":"weighted"}'
-```
 
 ## Tests
 
 ```bash
-pytest -q gateway_tests/test_gateway_policy.py gateway_tests/test_gateway_api.py
+# All gateway tests (including integration)
+pytest -q gateway_tests/
+
+# Run the finance stub demo
+python pilot-artifacts/finance-stub-demo/run_demo.py
 ```
 
 ## Preflight
