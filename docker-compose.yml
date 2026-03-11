@@ -1,0 +1,22 @@
+version: "3.9"
+services:
+  agentgate:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - AGENTGATE_ADMIN_TOKEN=${AGENTGATE_ADMIN_TOKEN:-admin-secret}
+      - AGENTGATE_DB_PATH=/data/agentgate.db
+      - AGENTGATE_HOST=0.0.0.0
+      - AGENTGATE_PORT=8000
+    volumes:
+      - agentgate-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/gateway/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  agentgate-data:

@@ -1,4 +1,5 @@
 import logging
+import os
 import time
 from typing import Dict, List, Optional, Any
 import asyncio
@@ -10,6 +11,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from prometheus_client import Counter, Histogram, Gauge, Summary, generate_latest, CONTENT_TYPE_LATEST
 from pydantic import BaseModel, Field
+
+# Read config from environment (AGENTGATE_* takes precedence over legacy MCP_GATEWAY_*)
+_AGENTGATE_HOST = os.getenv("AGENTGATE_HOST", os.getenv("MCP_HOST", "127.0.0.1"))
+_AGENTGATE_PORT = int(os.getenv("AGENTGATE_PORT", os.getenv("MCP_PORT", "8000")))
+_AGENTGATE_DB_PATH = os.getenv("AGENTGATE_DB_PATH", None)
+_AGENTGATE_ADMIN_TOKEN = os.getenv("AGENTGATE_ADMIN_TOKEN", None)
+
+# Propagate AGENTGATE_* to MCP_GATEWAY_* so api.py picks them up
+if _AGENTGATE_DB_PATH:
+    os.environ.setdefault("MCP_GATEWAY_DB_PATH", _AGENTGATE_DB_PATH)
+if _AGENTGATE_ADMIN_TOKEN:
+    os.environ.setdefault("MCP_GATEWAY_ADMIN_TOKEN", _AGENTGATE_ADMIN_TOKEN)
 
 from src.mcp_gateway.api import router as gateway_router
 from src.mcp_gateway.api import mount_codemode_router
@@ -463,4 +476,13 @@ async def report_resource_usage(
 async def get_alert_config():
     """Get current alert configuration."""
     return AlertConfig(threshold=ALERT_THRESHOLD, enabled=True)
+
+
+if __name__ == "__main__":
+    uvicorn.run(
+        "server:app",
+        host=_AGENTGATE_HOST,
+        port=_AGENTGATE_PORT,
+        reload=False,
+    )
 

@@ -57,6 +57,36 @@ See:
 
 > Protected endpoints require `x-gateway-token` with appropriate role/scope.
 
+## Quick Start with Docker
+
+```bash
+cp .env.example .env
+# Edit .env and set AGENTGATE_ADMIN_TOKEN
+docker compose up -d
+curl http://localhost:8000/gateway/health
+```
+
+## Using with Claude
+
+```python
+from src.mcp_gateway.claude_integration import GatewayClient
+import anthropic
+
+client = GatewayClient("http://localhost:8000", token="your-token")
+tools = client.as_tools()
+
+# Pass tools to Claude
+anthropic_client = anthropic.Anthropic()
+response = anthropic_client.messages.create(
+    model="claude-opus-4-5",
+    max_tokens=1024,
+    tools=tools,
+    messages=[{"role": "user", "content": "List all registered MCP servers"}]
+)
+```
+
+See `scripts/claude_demo.py` for a full working example including tool_use response handling.
+
 ## Quick Start
 
 ```bash
