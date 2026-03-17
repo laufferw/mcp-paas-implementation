@@ -9,7 +9,7 @@ import uvicorn
 from fastapi import FastAPI, Request, Response, Depends, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from prometheus_client import Counter, Histogram, Gauge, Summary, generate_latest, CONTENT_TYPE_LATEST
+from prometheus_client import Counter, Histogram, Gauge, Summary, generate_latest, CONTENT_TYPE_LATEST, REGISTRY
 from pydantic import BaseModel, Field
 
 # Read config from environment (AGENTGATE_* takes precedence over legacy MCP_GATEWAY_*)
@@ -50,20 +50,32 @@ structlog.configure(
 
 logger = structlog.get_logger()
 
-# Define Prometheus metrics
-REQUEST_COUNT = Counter(
+# Define Prometheus metrics — guard against duplicate registration on reload
+def _get_or_create_counter(name, description, labels):
+    try:
+        return Counter(name, description, labels)
+    except ValueError:
+        return REGISTRY._names_to_collectors.get(name + "_total")
+
+def _get_or_create_histogram(name, description, labels):
+    try:
+        return Histogram(name, description, labels)
+    except ValueError:
+        return REGISTRY._names_to_collectors.get(name + "_bucket")
+
+REQUEST_COUNT = _get_or_create_counter(
     "request_count", 
     "Total count of requests by endpoint and status", 
     ["endpoint", "method", "status"]
 )
 
-REQUEST_LATENCY = Histogram(
+REQUEST_LATENCY = _get_or_create_histogram(
     "request_latency_seconds", 
     "Request latency in seconds", 
     ["endpoint", "method"]
 )
 
-TENANT_REQUEST_COUNT = Counter(
+TENANT_REQUEST_COUNT = _get_or_create_counter(
     "tenant_request_count", 
     "Request count by tenant", 
     ["tenant_id", "endpoint"]
@@ -416,6 +428,14 @@ async def check_resource_limits(tenant_id: str, resource_type: str):
         )
 
 # Routes
+
+@app.get("/llms.txt", response_class=Response)
+async def llms_txt():
+    """Machine-readable description for LLM crawlers and agent discovery."""
+    import pathlib
+    llms_path = pathlib.Path(__file__).parent / "llms.txt"
+    content = llms_path.read_text() if llms_path.exists() else "# AgentGate\nMCP gateway control plane. GET /gateway/agent-info for agent onboarding."
+    return Response(content=content, media_type="text/plain")
 
 @app.get("/metrics")
 async def metrics():

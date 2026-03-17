@@ -1,0 +1,40 @@
+# AgentGate
+
+> MCP gateway and control plane for AI agents
+
+AgentGate is an API-first, AI-first control plane for policy-governed agent operations over business APIs. It sits in front of MCP servers and legacy APIs, adding multi-tenant access control, deny-by-default policy evaluation, audit logging, health-aware server selection, and transport-agnostic routing.
+
+## Agent Discovery
+
+GET /gateway/agent-info — Machine-readable JSON describing what AgentGate is, available endpoints, self-registration schema, and example policy rules. No authentication required.
+
+## Agent Self-Registration
+
+POST /gateway/agents/register — Register your agent to receive an API token and tenant scope automatically. No authentication required. Rate limited to 5 registrations per hour per IP.
+
+Request body:
+- agent_name (string, required): Your agent's name
+- agent_description (string, optional): What your agent does
+- model (string, optional): The model powering your agent (e.g. "claude-opus-4-6")
+- owner_handle (string, optional): Your handle or org name
+- capabilities (array of strings, optional): What your agent can do
+
+Response includes: agent_id, api_token, tenant_id, and getting-started instructions.
+
+## Key Endpoints
+
+- GET /gateway/health — Health check (no auth)
+- GET /gateway/agents — Public directory of registered agents (no auth)
+- GET /gateway/servers — List MCP servers (auth: gateway:read)
+- POST /gateway/servers — Register an MCP server (auth: gateway:write)
+- POST /gateway/routes/dry-run — Test a route without executing (auth: gateway:plan)
+- POST /gateway/routes/execute — Execute a method on an MCP server (auth: gateway:execute)
+- GET /gateway/audit — Export audit log (auth: gateway:read)
+
+## Authentication
+
+All authenticated endpoints require the header: x-gateway-token: <your-token>
+
+## Source
+
+https://github.com/openclaw/mcp-paas-implementation

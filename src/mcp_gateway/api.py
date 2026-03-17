@@ -1,14 +1,17 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
+import secrets
 import time
+from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
 from uuid import uuid4
 
-from fastapi import APIRouter, Header, HTTPException, Query
+from fastapi import APIRouter, Header, HTTPException, Query, Request as FastAPIRequest
 from fastapi.responses import Response
 from prometheus_client import generate_latest
 from pydantic import BaseModel, Field
@@ -113,6 +116,29 @@ class AccessTokenCreate(BaseModel):
     scopes: list[str] = Field(default_factory=list)
     enabled: bool = True
     expires_at: str | None = None
+
+
+class AgentRegisterRequest(BaseModel):
+    agent_name: str
+    agent_description: str | None = None
+    model: str | None = None
+    owner_handle: str | None = None
+    capabilities: list[str] = Field(default_factory=list)
+
+
+# --- Rate limiter for agent registration (5/hour per IP) ---
+_agent_register_timestamps: dict[str, list[float]] = defaultdict(list)
+_AGENT_REGISTER_LIMIT = 5
+_AGENT_REGISTER_WINDOW = 3600  # 1 hour
+
+
+def _check_agent_register_rate(ip: str) -> None:
+    now = time.monotonic()
+    window = [t for t in _agent_register_timestamps[ip] if now - t < _AGENT_REGISTER_WINDOW]
+    _agent_register_timestamps[ip] = window
+    if len(window) >= _AGENT_REGISTER_LIMIT:
+        raise HTTPException(status_code=429, detail="Rate limit exceeded: 5 registrations per hour")
+    window.append(now)
 
 
 @router.get("/health")
@@ -292,6 +318,161 @@ async def revoke_access_token(token: str, x_gateway_token: str | None = Header(d
     if not revoked:
         raise HTTPException(status_code=404, detail="Token not found")
     return {"status": "ok", "token": token, "revoked": True}
+
+
+@router.get("/agent-info")
+async def agent_info() -> dict:
+    """Machine-readable endpoint describing AgentGate for AI agents."""
+    return {
+        "service": "AgentGate",
+        "description": (
+            "AgentGate is an MCP gateway and control plane for AI agents. "
+            "It sits in front of MCP servers and business APIs, adding policy-governed "
+            "routing, multi-tenant access control, audit logging, and health-aware "
+            "server selection. Agents use AgentGate to safely invoke tools across "
+            "organizational boundaries."
+        ),
+        "self_registration": {
+            "endpoint": "POST /gateway/agents/register",
+            "description": "Register your agent to get an API token and start routing requests.",
+            "request_schema": {
+                "agent_name": {"type": "string", "required": True},
+                "agent_description": {"type": "string", "required": False},
+                "model": {"type": "string", "required": False, "example": "claude-opus-4-6"},
+                "owner_handle": {"type": "string", "required": False},
+                "capabilities": {"type": "array[string]", "required": False, "example": ["code-review", "data-analysis"]},
+            },
+            "rate_limit": "5 registrations per hour per IP",
+        },
+        "endpoints": [
+            {"method": "GET", "path": "/gateway/health", "auth": False, "description": "Health check"},
+            {"method": "GET", "path": "/gateway/agent-info", "auth": False, "description": "This endpoint — agent-readable gateway info"},
+            {"method": "POST", "path": "/gateway/agents/register", "auth": False, "description": "Self-register an agent"},
+            {"method": "GET", "path": "/gateway/agents", "auth": False, "description": "Public directory of registered agents"},
+            {"method": "GET", "path": "/gateway/servers", "auth": True, "scope": "gateway:read", "description": "List MCP servers"},
+            {"method": "POST", "path": "/gateway/servers", "auth": True, "scope": "gateway:write", "description": "Register an MCP server"},
+            {"method": "POST", "path": "/gateway/routes/dry-run", "auth": True, "scope": "gateway:plan", "description": "Test a route without executing"},
+            {"method": "POST", "path": "/gateway/routes/execute", "auth": True, "scope": "gateway:execute", "description": "Execute a method on an MCP server"},
+            {"method": "GET", "path": "/gateway/policy/rules", "auth": True, "scope": "gateway:policy:read", "description": "List policy rules"},
+            {"method": "POST", "path": "/gateway/access/tokens", "auth": True, "scope": "admin", "description": "Create access tokens"},
+            {"method": "GET", "path": "/gateway/audit", "auth": True, "scope": "gateway:read", "description": "Export audit log"},
+        ],
+        "policy_examples": [
+            {
+                "name": "allow-tools-list",
+                "effect": "allow",
+                "actions": ["tools/list"],
+                "resources": ["gateway.server.*"],
+                "description": "Allow listing tools on any server",
+            },
+            {
+                "name": "deny-destructive",
+                "effect": "deny",
+                "actions": ["tools/call"],
+                "resources": ["gateway.server.prod-*"],
+                "description": "Block tool calls to production servers",
+            },
+        ],
+        "dry_run": {
+            "endpoint": "POST /gateway/routes/dry-run",
+            "description": "Test whether a route would be allowed before executing. Requires gateway:plan scope.",
+            "example_body": {
+                "tenant_id": "your-tenant",
+                "action": "tools/list",
+                "server_id": "target-server-id",
+            },
+        },
+    }
+
+
+async def _register_agent_impl(payload: AgentRegisterRequest, client_ip: str = "unknown") -> dict:
+    _check_agent_register_rate(client_ip)
+
+    agent_id = f"agent-{uuid4().hex[:12]}"
+    api_token = f"agt-{secrets.token_urlsafe(32)}"
+    tenant_id = f"agent-{hashlib.sha256(agent_id.encode()).hexdigest()[:8]}"
+    now = datetime.now(timezone.utc).isoformat()
+
+    # Create access token for this agent
+    authz.upsert_token(
+        AccessToken(
+            token=api_token,
+            subject_id=agent_id,
+            tenant_id=tenant_id,
+            role="tenant-operator",
+            scopes={"gateway:read", "gateway:write", "gateway:plan", "gateway:execute"},
+        )
+    )
+
+    # Store agent metadata
+    storage.execute(
+        """
+        INSERT INTO registered_agents (id, agent_name, description, model, owner_handle, capabilities_json, api_token_ref, registered_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            agent_id,
+            payload.agent_name,
+            payload.agent_description,
+            payload.model,
+            payload.owner_handle,
+            json.dumps(payload.capabilities),
+            api_token,
+            now,
+        ),
+    )
+
+    return {
+        "agent_id": agent_id,
+        "api_token": api_token,
+        "tenant_id": tenant_id,
+        "getting_started": {
+            "step_1": "Save your api_token securely — it will not be shown again.",
+            "step_2": f"Use header 'x-gateway-token: {api_token}' for all authenticated requests.",
+            "step_3": "Register MCP servers: POST /gateway/servers",
+            "step_4": "Create policy rules (ask your admin) or use dry-run to test routing.",
+            "step_5": "Execute tool calls: POST /gateway/routes/execute",
+        },
+    }
+
+
+@router.post("/agents/register")
+async def register_agent(payload: AgentRegisterRequest, request: FastAPIRequest) -> dict:
+    """Agent self-registration: creates a tenant-scoped token and returns credentials."""
+    client_ip = request.client.host if request.client else "unknown"
+    return await _register_agent_impl(payload, client_ip=client_ip)
+
+
+@router.get("/agents")
+async def list_agents(
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+) -> dict:
+    """Public directory of registered agents."""
+    offset = (page - 1) * page_size
+    rows = storage.query_all(
+        "SELECT id, agent_name, description, model, capabilities_json, registered_at FROM registered_agents ORDER BY registered_at DESC LIMIT ? OFFSET ?",
+        (page_size, offset),
+    )
+    count_row = storage.query_one("SELECT COUNT(*) as total FROM registered_agents")
+    total = count_row["total"] if count_row else 0
+
+    return {
+        "items": [
+            {
+                "agent_id": r["id"],
+                "agent_name": r["agent_name"],
+                "description": r["description"],
+                "model": r["model"],
+                "capabilities": json.loads(r["capabilities_json"] or "[]"),
+                "registered_at": r["registered_at"],
+            }
+            for r in rows
+        ],
+        "page": page,
+        "page_size": page_size,
+        "total": total,
+    }
 
 
 def _dry_run_audit_fields(actor: AccessToken, tenant_id: str, action: str) -> dict:

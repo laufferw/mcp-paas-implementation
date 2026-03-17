@@ -76,6 +76,22 @@ class GatewayStorage:
 
             conn.execute(
                 """
+                CREATE TABLE IF NOT EXISTS registered_agents (
+                    id TEXT PRIMARY KEY,
+                    agent_name TEXT NOT NULL,
+                    description TEXT,
+                    model TEXT,
+                    owner_handle TEXT,
+                    capabilities_json TEXT NOT NULL DEFAULT '[]',
+                    api_token_ref TEXT,
+                    registered_at TEXT NOT NULL,
+                    FOREIGN KEY (api_token_ref) REFERENCES gateway_access_tokens(token)
+                )
+                """
+            )
+
+            conn.execute(
+                """
                 CREATE TABLE IF NOT EXISTS gateway_audit_log (
                     event_id TEXT PRIMARY KEY,
                     decided_at TEXT NOT NULL,
