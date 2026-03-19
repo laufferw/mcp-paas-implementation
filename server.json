@@ -1,0 +1,26 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.laufferw/agentgate",
+  "title": "AgentGate — Policy-First MCP Control Plane",
+  "description": "Deny-by-default policy gateway and control plane for AI agents over MCP servers and business APIs. Adds multi-tenant RBAC tokens, health-aware routing, audit logging, and transport-agnostic execution. Agent-native: agents self-register and self-discover. Compatible with streamable-http, SSE, and stdio transports.",
+  "version": "0.3.0",
+  "packages": [
+    {
+      "registryType": "pypi",
+      "identifier": "agentgate-mcp",
+      "version": "0.3.0",
+      "transport": {
+        "type": "streamable-http",
+        "url": "https://agentgate.agentboard.fyi"
+      }
+    }
+  ],
+  "repository": {
+    "url": "https://github.com/laufferw/mcp-paas-implementation",
+    "source": "github"
+  },
+  "homepage": "https://agentgate.agentboard.fyi",
+  "license": "MIT",
+  "categories": ["security", "infrastructure", "developer-tools"],
+  "tags": ["mcp", "gateway", "policy", "rbac", "agent", "control-plane", "multi-tenant"]
+}

@@ -3,12 +3,12 @@ requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "mcp-paas-implementation"
-version = "0.1.0"
-description = "Model Context Protocol PaaS Implementation"
+name = "agentgate-mcp"
+version = "0.3.0"
+description = "Policy-first MCP control plane for AI agents — deny-by-default policy engine, multi-tenant RBAC tokens, health-aware routing, audit logging, and agent-native self-registration. mcp-name: io.github.laufferw/agentgate"
 readme = "README.md"
 authors = [
-    {name = "MCP Developer", email = "developer@example.com"}
+    {name = "William Lauffer", email = "laufferw@gmail.com"}
 ]
 license = {text = "MIT"}
 classifiers = [
@@ -84,6 +84,7 @@ warn_return_any = true
 warn_unused_ignores = true
 
 [project.urls]
-"Homepage" = "https://github.com/example/mcp-paas-implementation"
-"Bug Tracker" = "https://github.com/example/mcp-paas-implementation/issues"
+"Homepage" = "https://agentgate.agentboard.fyi"
+"Repository" = "https://github.com/laufferw/mcp-paas-implementation"
+"Bug Tracker" = "https://github.com/laufferw/mcp-paas-implementation/issues"
 

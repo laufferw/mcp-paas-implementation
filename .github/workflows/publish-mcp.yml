@@ -1,0 +1,43 @@
+name: Publish to MCP Registry
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write  # Required for GitHub OIDC auth to MCP Registry
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install build tools
+        run: pip install build twine
+
+      - name: Build package
+        run: python -m build
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          # Uses OIDC trusted publisher — no token needed
+          # Configure at: https://pypi.org/manage/project/agentgate-mcp/settings/publishing/
+          skip-existing: true
+
+      - name: Install MCP publisher
+        run: pip install mcp-registry-publisher 2>/dev/null || echo "Using npx fallback"
+
+      - name: Publish to MCP Registry
+        uses: modelcontextprotocol/registry-publisher@v1
+        with:
+          server-path: .
+          auth-method: github-oidc
